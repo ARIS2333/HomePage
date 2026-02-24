@@ -8,7 +8,6 @@ category: Cross-Chain
 draft: false
 image: ./cover.png
 ---
-
 # Introduction of LayerZero
 
 LayerZero is an omnichain interoperability protocol designed for arbitrary message passing across different blockchains. It acts as a foundational communication layer that enables developers to create Omnichain Applications (OApps) that can maintain state and transfer assets across different chains seamlessly, without the need for a central intermediary or a middle-chain consensus.
@@ -23,7 +22,7 @@ LayerZero is an omnichain interoperability protocol designed for arbitrary messa
 
 # Protocol Overview
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image.png)
+![image.png](LayerZero%20Cross-Chain/image.png)
 
 ## Key Components
 
@@ -83,7 +82,7 @@ To demonstrate the lifecycle of a cross-chain transaction, I performed a hands-o
 
 In this example, I minted tokens on Arbitrum and initiated a cross-chain transfer of **1 OFT** to Sepolia to observe the underlying protocol interactions.
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%201.png)
+![image.png](LayerZero%20Cross-Chain/image%201.png)
 
 The transaction details can be viewed here:
 
@@ -93,7 +92,7 @@ The transaction details can be viewed here:
 
 The complete workflow can be represented by the image below:
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%202.png)
+![image.png](LayerZero%20Cross-Chain/image%202.png)
 
 **OFT Message Flow**:
 
@@ -149,7 +148,7 @@ contract MyOFT is OFT {
 
 After this, we can see that my wallet address (`0x5B41…cd`) has successfully received 100,000 OFT tokens.
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%203.png)
+![image.png](LayerZero%20Cross-Chain/image%203.png)
 
 ## 2. Origin Chain Invocation (Arbitrum)
 
@@ -161,7 +160,7 @@ I used the Hardhat CLI task to execute the transaction. This task calculates the
 npx hardhat lz:oft:send --network arbitrum-sepolia --to-network sepolia --amount 1 --to 0x3d99...
 ```
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%204.png)
+![image.png](LayerZero%20Cross-Chain/image%204.png)
 
 Inside the `MyOFT.sol` contract, the `_lzSend` function is triggered. It performs two key actions:
 
@@ -210,7 +209,7 @@ This stage is automated by the LayerZero infrastructure configured during the wi
 
 Upon successful verification, the **Executor** completed the transfer on Ethereum Sepolia.
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%205.png)
+![image.png](LayerZero%20Cross-Chain/image%205.png)
 
 The LayerZero Executor （`0xF5E8…7a`） called the `lzReceive` function on the destination Endpoint, which in turn called my OFT contract.
 
@@ -229,7 +228,7 @@ After this, the MyOFT contract on sepolia minted 1 token for my wallet address.
 
 # DVN
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%206.png)
+![image.png](LayerZero%20Cross-Chain/image%206.png)
 
 The stack of multiple DVNs allows each application to configure a unique security threshold for each source and destination, known as X-of-Y-of-N, where
 
@@ -237,7 +236,7 @@ The stack of multiple DVNs allows each application to configure a unique securit
 - **Y** represents the **Optional DVNs**: These are a pool of additional verifiers from which a specific number of approvals is needed.
 - **N** represents the **Threshold of Optional DVNs**: This is the minimum number of 'Y' verifiers that must attest to the message.
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%207.png)
+![image.png](LayerZero%20Cross-Chain/image%207.png)
 
 In this stack, each DVN independently verifies the payloadHash of each message to ensure integrity. Once the designated DVN threshold has been reached, the message nonce can be marked as verified and inserted into the destination Endpoint for execution.
 
@@ -291,7 +290,7 @@ Every transaction you send through LayerZero consists of four distinct cost elem
 
 To allow a user to pay in ARB (on Arbitrum) for a transaction that ends in ETH (on Sepolia), the protocol uses a real-time conversion formula:
 
-![image.png](Analysis%20of%20LayerZero%20Cross-Chain%20Bridge%20(Arb-Sep%20/image%208.png)
+![image.png](LayerZero%20Cross-Chain/image%208.png)
 
 The protocol calculates the total gas needed on the destination, multiplies it by the current gas price on that chain, and then uses a price ratio (e.g., ETH/ARB) to determine the equivalent amount in the source chain's native token.
 
