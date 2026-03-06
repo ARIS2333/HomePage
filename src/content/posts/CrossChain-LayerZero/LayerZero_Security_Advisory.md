@@ -1,8 +1,8 @@
 ---
-title: LayerZero Security Advisory
+title: LayerZero(2) - Security Advisory
 published: 2026-02-26
 pinned: false
-description: Considerations for Developers and Users When Using LayerZero
+description: Considerations for developers when building ontop of LayerZero
 tags: [Web3, Dev Handbook, Cross-Chain]
 category: Cross-Chain
 draft: false

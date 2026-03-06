@@ -1,8 +1,8 @@
 ---
-title: Breakdown of LayerZero Cross-Chain Protocol
+title: LayerZero(1) - Quick Walkthrough
 published: 2026-02-24
 pinned: false
-description: Explain the mechanism of LayerZero using a real cross-chain transaction.
+description: Breakdown LayerZero using a real cross-chain transaction.
 tags: [Web3, Dev Handbook, Cross-Chain]
 category: Cross-Chain
 draft: false
