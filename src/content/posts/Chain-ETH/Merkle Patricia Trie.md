@@ -1,17 +1,48 @@
 ---
-title: Ethereum Src Code Breakdown (1)
+title: EELS(1) What is Merkle-Patricia Trie
 published: 2026-03-27
 pinned: false
-description: Merkle Patricia Trie
-tags: [BlockChain, Ethereum]
-category: Ethereum
+description: A comprehensive theoretical deep dive into the MPT architecture.
+tags: [BlockChain,Ethereum,EELS]
+category: Ethereum Internals
 draft: false
 ---
-The **Merkle-Patricia Trie (MPT)** is a core data structure of Ethereum, combining the advantages of both the **Merkle Tree** and the **Patricia Trie**: the former provides data integrity verification through upward hash propagation, while the latter enables efficient key-value retrieval via prefix path compression.
+# Preface
+
+This article is part of a series analyzing the core components of Ethereum through the **Ethereum Execution Layer Specification (EELS)**. 
+
+**What is EELS?**
+EELS is a Python reference implementation of the Ethereum execution client, designed with a focus on readability and clarity. It serves as a programmer-friendly, up-to-date successor to the original Yellow Paper and is the primary tool for prototyping new Ethereum Improvement Proposals (EIPs). EELS provides complete protocol snapshots at each fork and rendered diffs between them.
+
+**Scope and Implementation**
+Note that EELS does not implement the JSON-RPC API or P2P networking. To validate blocks, it requires an external RPC provider to fetch data, which EELS then processes and stores in a local database.
+
+**Version Reference**
+The code analysis in this article is based on the **Osaka** fork: 
+[ethereum/execution-specs (Osaka)](https://github.com/ethereum/execution-specs/tree/forks/amsterdam/src/ethereum/forks/osaka)
+
+---
+
+# Introduction
+
+In Ethereum, the "State" is everything. Every account balance, every smart contract variable, and every transaction receipt must be stored in a way that is both **efficient to access** and **cryptographically immutable**. The Merkle-Patricia Trie is the "backbone" of this system. Before we can dive into the Python code of EELS to see how transactions are executed or how blocks are validated, we must first understand the "container" that holds all of Ethereum’s data. 
+
+In this first installment of the series, we will peel back the layers of the MPT. We will discuss:
+
+*   **The Evolution of the Trie:** How Ethereum combines the integrity of Merkle Trees with the retrieval speed of Patricia Tries.
+*   **The Anatomy of a Node:** A deep dive into the four types of nodes that make the tree both compact and searchable.
+*   **The Three Faces of a Key:** Why Ethereum keys transform between 3 encoding methods as they move from memory to disk.
+*   **From Theory to Specification:** How these logical concepts are optimized in real-world clients like Geth.
+
+**What you will learn:**
+By the end of this article, you will understand how Ethereum can prove the existence of a single transaction among millions using only a few amount of data. This architectural understanding is the essential prerequisite for reading the EELS source code and understanding how the Ethereum "World State" actually functions.
 
 # **Theoretical Background**
 
 To understand the Merkle-Patricia Trie (MPT), we must first break down its constituent parts: the **Merkle Tree**, the **Trie**, and the **Patricia Trie**.
+
+
+Broadly speaking, MPT is a data structure combining the advantages of both the Merkle Tree and the Patricia Trie: the former provides data integrity verification through upward hash propagation, while the latter enables efficient key-value retrieval via prefix path compression.
 
 ---
 

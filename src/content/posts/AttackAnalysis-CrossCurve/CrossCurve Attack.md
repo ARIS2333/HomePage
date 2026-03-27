@@ -6,7 +6,6 @@ description: Comprehensive report on how the attack was implemented and how to f
 tags: [Smart Contract, Cross-Chain]
 category: Cross-Chain
 draft: false
-image: ./cover.png
 ---
 ## 1. Overview
 

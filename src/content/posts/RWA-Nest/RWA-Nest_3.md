@@ -6,7 +6,6 @@ description: Key Execution Flows
 tags: [Smart Contract,RWA]
 category: RWA
 draft: false
-image: ./cover.png
 ---
 ## Scenario A: Permissioned Deposit
 

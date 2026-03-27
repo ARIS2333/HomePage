@@ -6,7 +6,6 @@ description: Explain LayerZero using code and example
 tags: [Smart Contract, Cross-Chain]
 category: Cross-Chain
 draft: false
-image: ./cover.png
 ---
 # Quick Walkthrough
 

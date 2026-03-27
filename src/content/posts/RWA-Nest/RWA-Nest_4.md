@@ -6,7 +6,6 @@ description: Auditing
 tags: [Smart Contract,RWA]
 category: RWA
 draft: false
-image: ./cover.png
 ---
 
 ## Invariant Violations

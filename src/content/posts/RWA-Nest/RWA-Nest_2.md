@@ -6,7 +6,6 @@ description: Roles & Security Model
 tags: [Smart Contract,RWA]
 category: RWA
 draft: false
-image: ./cover.png
 ---
 
 ## **Role 1:  Owner (Per-Contract)**

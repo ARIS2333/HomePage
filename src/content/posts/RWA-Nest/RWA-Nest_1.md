@@ -6,7 +6,6 @@ description: Overview
 tags: [Smart Contract, RWA]
 category: RWA
 draft: false
-image: ./cover.png
 ---
 ## 1. Executive Summary
 
