@@ -3,8 +3,8 @@ title: CrossCurve Attak Analysis
 published: 2026-02-03
 pinned: false
 description: Comprehensive report on how the attack was implemented and how to fix the vulnerabilities.
-tags: [Web3, Defi Hack Analysis, Cross-Chain]
-category: Defi Hack Analysis
+tags: [Smart Contract, Cross-Chain]
+category: Cross-Chain
 draft: false
 image: ./cover.png
 ---

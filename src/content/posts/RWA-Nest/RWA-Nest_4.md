@@ -1,9 +1,9 @@
 ---
-title: Analysis Report of Nest (RWA Earn) - Part 4
+title: Nest (RWA Earn) - Part 4
 published: 2026-02-12
 pinned: false
 description: Auditing
-tags: [Web3,Dev Handbook,RWA]
+tags: [Smart Contract,RWA]
 category: RWA
 draft: false
 image: ./cover.png

@@ -1,9 +1,9 @@
 ---
-title: Analysis Report of Nest (RWA Earn) - Part 3
+title: Nest (RWA Earn) - Part 3
 published: 2026-02-11
 pinned: false
 description: Key Execution Flows
-tags: [Web3,Dev Handbook,RWA]
+tags: [Smart Contract,RWA]
 category: RWA
 draft: false
 image: ./cover.png

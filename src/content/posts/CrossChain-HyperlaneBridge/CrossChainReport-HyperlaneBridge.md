@@ -1,9 +1,9 @@
 ---
-title: Breakdown of Hyperlane Cross-Chain Bridge
+title:  Hyperlane Cross-Chain Bridge
 published: 2026-01-31
 pinned: false
-description: Explain the mechanism of Hyperlane using a real cross-chain transaction.
-tags: [Web3, Dev Handbook, Cross-Chain]
+description: Explain Hyperlane using code and example
+tags: [Smart Contract, Cross-Chain]
 category: Cross-Chain
 draft: false
 image: ./cover.png
