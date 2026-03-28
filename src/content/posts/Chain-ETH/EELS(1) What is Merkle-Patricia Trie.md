@@ -54,7 +54,7 @@ Invented by Ralph Merkle in 1988, Merkle Trees are a foundational cryptographic 
 
 In a Merkle Tree, data blocks (such as transactions) are grouped at the bottom as "leaves." Each leaf is hashed, and pairs of these hashes are hashed together to form a parent node. This process continues up the tree until a single hash remains at the top: the **Merkle Root**.
 
-![image.png](Merkle%20Patricia%20Trie/image.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image.png)
 
 This structure creates a "digital fingerprint" of the entire dataset. Because of the nature of cryptographic hashing:
 
@@ -88,7 +88,7 @@ For example, once it is found that the value of a node such as Root has changed,
     
     Merkle Trees allow low-power devices (like smartphones) to participate in the network. A **Light Node** only stores the 80-byte block headers containing the Merkle Root. It relies on full nodes to provide the necessary "Merkle Paths" to verify specific transactions on demand.
     
-    ![image.png](Merkle%20Patricia%20Trie/image%201.png)
+    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%201.png)
     
 
 ### **Disadvantage**
@@ -114,13 +114,13 @@ In a Trie, the path from the root to a leaf represents the key itself. Its prima
 
 A Trie stores keys by breaking them down into individual characters or symbols. Each step down the tree corresponds to one character in the key.
 
-![image.png](Merkle%20Patricia%20Trie/image%202.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%202.png)
 
 As shown in the above figure, multiple strings can share the same path if they share a common prefix. For example, the words "Ball" and "Bat" both branch off the "B" → "a" path. The $ symbol acts as a "terminator," indicating that a valid string ends at that specific node.
 
 In a technical implementation (such as storing English words), each node is typically an array of pointers. For the English alphabet, a node might contain 27 slots: indices 0–25 represent the characters 'a' through 'z', and the 26th slot serves as a marker for the end of a string.
 
-![image.png](Merkle%20Patricia%20Trie/image%203.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%203.png)
 
 As seen in the figure, while this allows for direct indexing, it often results in many "NULL" pointers, as not every node will have a child for every possible letter.
 
@@ -144,7 +144,7 @@ If a key is very long and does not share a prefix with any other keys, the Trie 
 
 The space inefficiency of the standard Trie is a major hurdle for blockchain state storage. To solve this, we use the **Patricia Trie**, which "compresses" these long, unbranching paths into single nodes to save space and reduce the number of I/O steps.
 
-![image.png](Merkle%20Patricia%20Trie/image%204.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%204.png)
 
 ---
 
@@ -190,7 +190,7 @@ The simplest node. It represents an empty tree or an empty branch. In the code, 
 
 A Branch Node is used when paths diverge. Because keys are made of hex characters (`0`-`f`), there are 16 possible directions a path can take at any given fork. Therefore, a Branch Node contains **17 items: `[v0, v1, ..., v15, value]`**.
 
-![image.png](Merkle%20Patricia%20Trie/image%205.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%205.png)
 
 Think of a Branch Node as a major intersection:
 
@@ -203,7 +203,7 @@ A Leaf Node represents the end of a path.
 
 In a standard Trie, if you have a long key but no other keys share its path, you would have to create a long chain of empty branch nodes just to store it. The MPT optimizes this by using a Leaf Node, which contains **2 items: `[encodedPath, value]`**.
 
-![image.png](Merkle%20Patricia%20Trie/image%206.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%206.png)
 
 As shown in the figure, when a path reaches a point where **there are no more branches**, the MPT bundles the remaining nibbles together.
 
@@ -218,7 +218,7 @@ An Extension Node is another compression mechanism, but it is used for *shared p
 
 When multiple keys share a long common sequence of nibbles before they finally branch off, creating a Branch Node for every single shared character is wasteful. Instead, an Extension Node compresses that shared path.
 
-![image.png](Merkle%20Patricia%20Trie/image%207.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%207.png)
 
 - **`encodedPath`**: The shared prefix common to multiple keys (e.g., `"a7f"`).
 - **`hash`**: A cryptographic pointer to the next node (usually a Branch Node) where the paths finally split. The system uses this hash to look up the next node in the underlying database (like LevelDB).
@@ -236,7 +236,7 @@ We will discuss this prefix flag in the next section.
 
 To conclude this section on the MPT nodes, let’s put all the things together.
 
-![Gemini_Generated_Image_347jbs347jbs347j.png](Merkle%20Patricia%20Trie/Gemini_Generated_Image_347jbs347jbs347j.png)
+![Gemini_Generated_Image_347jbs347jbs347j.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/Gemini_Generated_Image_347jbs347jbs347j.png)
 
 | **Node Type** | **Context / Usage** | **Contents** |
 | --- | --- | --- |
@@ -273,7 +273,7 @@ Each path ends in a **Leaf Node** containing the unique "suffix" of the key an
 - Key 2 leaf stores: d337 + Value 2
 - Key 3 leaf stores: 9365 + Value 3
 
-![image.png](Merkle%20Patricia%20Trie/image%208.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%208.png)
 
 As shown in the figures, the "pointers" connecting these nodes are not simple memory addresses. They are **RLP-encoded Keccak256 hashes** of the child nodes.
 
@@ -334,7 +334,7 @@ When it is time to save the data to the disk (LevelDB), Hex encoding faces two p
 - **Bit 1:** `1` for Leaf, `0` for Extension.
 - **Bit 0:** `1` if the remaining path length is odd, `0` if it is even.
 
-![image.png](Merkle%20Patricia%20Trie/image%209.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%209.png)
 
 Here we use padding to make sure that, the **total number of nibbles must be even** when ****we eventually combine nibbles into bytes.
 
@@ -345,7 +345,7 @@ Here we use padding to make sure that, the **total number of nibbles must be eve
 
 At the end of the encoding section, let’s look at how the key for "cat" moves through the system:
 
-![image.png](Merkle%20Patricia%20Trie/image%2010.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2010.png)
 
 1. **Raw (Interface):** `[0x63, 0x61, 0x74]` ("cat")
 2. **Hex (Memory):** We split it into nibbles and add `16` because it's a leaf in this example:
@@ -384,28 +384,28 @@ The MPT grows dynamically as keys are added. Instead of a deep, static tree, it 
 
 1. **First Insertion (`a711355`):** Since there is only one key, the entire path is stored in a single **Leaf Node**.
     
-    ![image.png](Merkle%20Patricia%20Trie/image%2011.png)
+    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2011.png)
     
 2. **Second Insertion (`a77d337`):** This key shares the prefix `a7` with the first. The trie is reorganized: an **Extension Node** is created for `a7`, leading to a **Branch Node**. The remaining paths (`11355` and `7d337`) become two separate Leaf Nodes connected to slots `1` and `7` of that branch.
     
-    ![image.png](Merkle%20Patricia%20Trie/image%2012.png)
+    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2012.png)
     
 3. **Third Insertion (`a7f9365`):** This also shares the `a7` prefix. We simply add a new Leaf Node (`9365`) to slot `f` of the existing Branch Node.
     
-    ![image.png](Merkle%20Patricia%20Trie/image%2013.png)
+    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2013.png)
     
 4. **Fourth Insertion (`a77d397`):** This key shares a longer prefix (`a7` + `7d`) with the second key. This triggers a further split: slot `7` of the first branch now points to a new **Extension Node** (`d3`), which leads to another **Branch Node** to handle the final divergence between the nibbles `3` and `9`.
     
-    ![image.png](Merkle%20Patricia%20Trie/image%2014.png)
+    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2014.png)
     
 5. **Optional:** Things could end here, but the source code implementation of Geth needs to go one level deeper, and only the leaf nodes at the final level contain data.
     
-    ![image.png](Merkle%20Patricia%20Trie/image%2015.png)
+    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2015.png)
     
 
 Below figure shows The final state of the World State Trie after all the operations:
 
-![image.png](Merkle%20Patricia%20Trie/image%2016.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2016.png)
 
 ---
 
@@ -443,7 +443,7 @@ This is known as **Content-Addressed Storage**. Because every node is referenced
 
 Because nodes reference their children via hashes, the client does not need to load the entire multi-gigabyte state into memory. Instead, it performs **Lazy Loading**—only "unpacking" the nodes along the specific path it needs to access.
 
-![image.png](Merkle%20Patricia%20Trie/image%2017.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2017.png)
 
 As shown in the figure above, if we want to access the data for a key a711355, the process works as follows:
 
@@ -495,7 +495,7 @@ Like the Transaction Trie, every block has its own Receipt Trie. It records the 
 - **Path (Key):** The index of the transaction.
 - **Value:** Includes the post-transaction state, gas used, and **Event Logs** (which are critical for dApps to "listen" to contract activity).
 
-![image.png](Merkle%20Patricia%20Trie/image%2018.png)
+![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2018.png)
 
 The **Block Header** acts as the cryptographic anchor for the entire network. It contains three specific Merkle roots that allow any node to verify the integrity of the blockchain:
 
