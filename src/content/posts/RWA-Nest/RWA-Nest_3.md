@@ -7,6 +7,18 @@ tags: [Smart Contract,RWA]
 category: RWA
 draft: false
 ---
+
+## Table of Contents
+
+1. [Scenario A: Permissioned Deposit](#scenario-a-permissioned-deposit)
+2. [Scenario B: Asynchronous Redemption](#scenario-b-asynchronous-redemption)
+3. [Scenario C: Instant Redemption](#scenario-c-instant-redemption)
+4. [Scenario D: Exchange Rate Updates & Circuit Breakers](#scenario-d-exchange-rate-updates--circuit-breakers)
+5. [Scenario E: Cross-Chain Transfer for OFT](#scenario-e-cross-chain-transfer-for-oft)
+6. [Scenario F: Management Fee Claiming](#scenario-f-management-fee-claiming)
+
+---
+
 ## Scenario A: Permissioned Deposit
 
 **Context:** Users cannot deposit directly into the Vault. They must pass through the `NestVaultPredicateProxy` which validates an off-chain signature (proof of KYC).

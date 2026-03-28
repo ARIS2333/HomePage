@@ -8,6 +8,17 @@ category: RWA
 draft: false
 ---
 
+## Table of Contents
+
+1. [Invariant Violations](#invariant-violations)
+2. [Issues](#issues)
+    - [[INFO-1] Instant Redemption Fee Not Explicitly Accounted For](#info-1-instant-redemption-fee-not-explicitly-accounted-for)
+    - [[INFO-2] Misleading Comment in `updateRedeem` Function](#info-2-misleading-comment-in-updateredeem-function)
+    - [[INFO-3] Fee-on-Transfer Tokens Incompatibility](#info-3-fee-on-transfer-tokens-incompatibility)
+    - [[INFO-4] Missing Vault Authorization Check in `NestShareOFT.enter()`](#info-4-missing-vault-authorization-check-in-nestshareoftenter)
+
+---
+
 ## Invariant Violations
 
 1. **Share Conservation:**

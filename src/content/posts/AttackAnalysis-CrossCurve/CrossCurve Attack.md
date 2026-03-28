@@ -11,7 +11,14 @@ draft: false
 
 On February 2, 2026, CrossCurve (formerly Eywa), a multi-chain cross-chain liquidity bridge, suffered a security exploit resulting in the theft of **$1,441,892.31** in assets across Ethereum, Arbitrum, and other supported chains.
 
-The root cause of the attack was a critical **oversight in contract inheritance**: the CrossCurve team failed to override the externally callable `expressExecute()` function inherited from Axelar’s `AxelarExpressExecutable` contract. This allowed attackers to bypass Axelar Gateway’s mandatory cross-chain message validation, directly invoking the sensitive `_execute()` function with attacker-controlled parameters. By crafting malicious payloads, the attacker was able to trigger unauthorized asset unlocks from the Eywa CLP Portal, leading to the loss of funds.
+The root cause of the attack was a critical **oversight in contract inheritance**: the CrossCurve team failed to override the externally callable `expressExecute()` function inherited from Axelar's `AxelarExpressExecutable` contract. This allowed attackers to bypass Axelar Gateway's mandatory cross-chain message validation, directly invoking the sensitive `_execute()` function with attacker-controlled parameters. By crafting malicious payloads, the attacker was able to trigger unauthorized asset unlocks from the Eywa CLP Portal, leading to the loss of funds.
+
+## Table of Contents
+
+1. [Overview](#1-overview)
+2. [Exploit Flow: Step-by-Step Attack Path](#2-exploit-flow-step-by-step-attack-path)
+3. [Prerequisite for the Attack](#prerequisite-for-the-attack)
+4. [Intended Purpose & Proper Usage of `expressExecute()`](#intended-purpose--proper-usage-of-expressexecute)
 
 ---
 

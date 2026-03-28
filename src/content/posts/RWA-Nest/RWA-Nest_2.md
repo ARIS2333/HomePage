@@ -8,11 +8,26 @@ category: RWA
 draft: false
 ---
 
+## Table of Contents
+
+1. [Role 1: Owner (Per-Contract)](#role-1--owner-per-contract)
+    - [Vault Owner (NestVault / NestVaultOFT)](#a-vault-owner-nestvault--nestvaultoft)
+    - [Accountant Owner (NestAccountant)](#b-accountant-owner-nestaccountant)
+    - [Share Owner (NestShareOFT)](#c-share-owner-nestshareoft)
+    - [Proxy Owner (NestVaultPredicateProxy)](#d-proxy-owner-nestvaultpredicateproxy)
+2. [Role 2: Authorized Address](#role-2-authorized-address)
+3. [Role 3: ERC-7540 Operators](#role-3-erc-7540-operators)
+4. [Role 4: Predicate-Verified Users](#role-4-predicate-verified-users)
+
+---
+
 ## **Role 1:  Owner (Per-Contract)**
 
-The **Owner** is the address returned by `owner()` in each specific contract. Because each contract is initialized separately, the "Owner" of the Vault might not be the "Owner" of the Accountant.
+The **Owner** is the address returned by `owner()` in each specific contract. Because each contract is initialized separately, the "Owner" of the Vault might not be the "Owner" of the Accountant.
 
-### **A. Vault Owner (NestVault / NestVaultOFT)**
+---
+
+### **A. Vault Owner (NestVault / NestVaultOFT)**
 
 - **Pricing Authority:** Can call `setAccountantWithRateProviders` to change where the vault gets its exchange rate.
 - **Fiscal Policy:** Can call `setFee` to modify *Deposit*, *Redemption*, and *Instant Redemption* fees (up to the FEE_CAP).

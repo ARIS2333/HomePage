@@ -7,10 +7,30 @@ tags: [Smart Contract, Cross-Chain]
 category: Cross-Chain
 draft: false
 ---
+
+# Table of Contents
+1. [CCIP Overview](#ccip-overview)
+2. [Token Transfer Example](#token-transfer-example)
+    - [Automatic Approval](#automatic-approval)
+    - [Cross-Chain Transaction Details (Src Chain)](#cross-chain-transaction-details-src-chain)
+    - [Cross-Chain Transaction Details (Destination Chain)](#cross-chain-transaction-details-destination-chain)
+    - [Notes When Initiating a CCIP Cross-Chain Transfer](#notes-when-initiating-a-ccip-cross-chain-transfer)
+3. [CCIP Security Advisory](#ccip-security-advisory)
+4. [Token Pool](#token-pool)
+    - [Owner Privileges](#owner-privileges)
+    - [Decimal Handling](#decimal-handling)
+5. [tokenAdminRegistry](#tokenadminregistry)
+    - [Who Can register a token pool](#who-can-register-a-token-pool)
+    - [Administrator Privileges](#administrator-privileges)
+
+---
+
 # CCIP Overview
 
 ![image.jpg](Analysis%20of%20CCIP%20CrossChain%20Bridge/diagram.jpg)
 ![image.png](Analysis%20of%20CCIP%20CrossChain%20Bridge/image.png)
+
+---
 
 # Token Transfer Example
 

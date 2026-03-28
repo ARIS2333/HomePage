@@ -8,12 +8,29 @@ category: Cross-Chain
 draft: false
 ---
 
+# Table of Contents
+
+1. [Introduction of Hyperlane](#introduction-of-hyperlane)
+2. [Mechanism of Hyperlane](#mechanism-of-hyperlane)
+    - [Key Components](#key-components)
+    - [On The Source Chain Side](#on-the-source-chain-side)
+    - [Message Delivery on the Destination Chain](#message-delivery-on-the-destination-chain)
+3. [Contract Auditing](#contract-auditing)
+    - [Mailbox](#mailbox)
+    - [StaticAggregationIsm](#staticaggregationism)
+    - [StaticMessageIdMultisigIsm](#staticmessageidmultisigism)
+    - [Milk Token on BSC](#milk-token-on-bsc)
+    - [Other Security Considerations](#other-security-considerations)
+
+---
 
 # Introduction of Hyperlane
 
 Hyperlane is a permissionless interoperability protocol enabling cross-chain communication across different blockchain environments. It allows message passing and asset transfers between chains without centralized intermediaries.
 
 In this tutorial, I break down the core mechanics of Hyperlane using a real cross-chain transaction from Milkyroad Chain to Binance Smart Chain (BSC). I walk through the underlying protocol flow, explain the key smart contract code involved, and analyze the events emitted throughout the process.
+
+---
 
 # Mechanism of Hyperlane
 

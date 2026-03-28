@@ -7,6 +7,33 @@ tags: [BlockChain,Ethereum,EELS]
 category: Inside Ethereum
 draft: false
 ---
+
+# Table of Contents
+
+1. [Preface](#preface)
+2. [Introduction](#introduction)
+3. [Theoretical Background](#theoretical-background)
+    - [Merkle Tree](#merkle-tree)
+    - [Trie](#trie)
+    - [Patricia Trie](#patricia-trie)
+4. [MPT Breakdown](#mpt-breakdown)
+    - [Understanding the "Key" in Ethereum](#understanding-the-key-in-ethereum)
+    - [Nodes in MPT](#nodes-in-mpt)
+    - [Key Encoding in the MPT](#key-encoding-in-the-mpt)
+    - [An Example of MPT Evolution](#an-example-of-mpt-evolution)
+5. [Optimization in Geth](#optimization-in-geth)
+    - [The Memory Layer: Geth's nodeFlag](#the-memory-layer-geths-nodeflag)
+    - [The Persistence Layer: Content-Addressed Storage](#the-persistence-layer-content-addressed-storage)
+    - [Practical Workflow: Lazy Loading](#practical-workflow-lazy-loading)
+6. [The Four MPTs of Ethereum](#the-four-mpts-of-ethereum)
+    - [The State Trie (Global & Persistent)](#the-state-trie-global--persistent)
+    - [The Storage Trie (Per-Contract)](#the-storage-trie-per-contract)
+    - [The Transaction Trie (Per-Block)](#the-transaction-trie-per-block)
+    - [The Receipt Trie (Per-Block)](#the-receipt-trie-per-block)
+7. [Reference](#reference)
+
+---
+
 # Preface
 
 This article is part of a series analyzing the core components of Ethereum through the **Ethereum Execution Layer Specification (EELS)**. 
@@ -36,6 +63,8 @@ In this first installment of the series, we will peel back the layers of the MPT
 
 **What you will learn:**
 By the end of this article, you will understand how Ethereum can prove the existence of a single transaction among millions using only a few amount of data. This architectural understanding is the essential prerequisite for reading the EELS source code and understanding how the Ethereum "World State" actually functions.
+
+---
 
 # **Theoretical Background**
 

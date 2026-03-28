@@ -7,6 +7,21 @@ tags: [Smart Contract, Cross-Chain]
 category: Cross-Chain
 draft: false
 ---
+
+# Table of Contents
+
+1. [Introduction of LayerZero](#introduction-of-layerzero)
+2. [Protocol Overview](#protocol-overview)
+3. [An workflow example: Cross-Chain OFT Transfer](#an-workflow-example-cross-chain-oft-transfer)
+4. [DVN](#dvn)
+5. [Executors](#executors)
+6. [Transaction Pricing](#transaction-pricing)
+7. [Security Advisory](#security-advisory)
+    - [Part I — Developer Security Considerations](#part-i--developer-security-considerations)
+    - [Part II — User-Facing Security Considerations](#part-ii--user-facing-security-considerations)
+
+---
+
 # Quick Walkthrough
 
 ## Introduction of LayerZero

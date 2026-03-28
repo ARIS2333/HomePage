@@ -8,6 +8,20 @@ category: Inside Ethereum
 draft: false
 ---
 
+# Table of Contents
+1. [Preface](#preface)
+2. [Introduction](#introduction)
+3. [A Code-Driven Walkthrough](#a-code-driven-walkthrough)
+    - [Stage 1: Storing Data (`trie_set`)](#stage-1-storing-data-trie_set)
+    - [Stage 2: Key Transformation (`_prepare_trie`)](#stage-2-key-transformation-_prepare_trie)
+    - [Stage 3: Building the Tree (`patricialize`)](#stage-3-building-the-tree-patricialize)
+    - [Stage 4: Node Encoding & Hashing (`encode_internal_node`)](#stage-4-node-encoding--hashing-encode_internal_node)
+    - [Stage 5: Computing the Root (`root`)](#stage-5-computing-the-root-root)
+    - [Stage 6: Trie Evolution (Inserting a New Account)](#stage-6-trie-evolution-inserting-a-new-account)
+4. [Summary: The EELS Function Reference](#summary-the-eels-function-reference)
+
+---
+
 # Preface
 
 This article is part of a series analyzing the core components of Ethereum through the **Ethereum Execution Layer Specification (EELS)**.
