@@ -4,7 +4,7 @@ published: 2026-03-28
 pinned: false
 description: Demystifying the MPT using a code-driven walkthrough
 tags: [BlockChain,Ethereum,EELS]
-category: Ethereum Internals
+category: Inside Ethereum
 draft: false
 ---
 

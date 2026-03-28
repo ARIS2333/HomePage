@@ -4,7 +4,7 @@ published: 2026-03-27
 pinned: false
 description: A comprehensive theoretical deep dive into the MPT architecture.
 tags: [BlockChain,Ethereum,EELS]
-category: Ethereum Internals
+category: Inside Ethereum
 draft: false
 ---
 # Preface
