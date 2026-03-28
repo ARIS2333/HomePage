@@ -1,5 +1,5 @@
 ---
-title: CrossCurve Attak Analysis
+title: CrossCurve Attack Analysis
 published: 2026-02-03
 pinned: false
 description: Comprehensive report on how the attack was implemented and how to fix the vulnerabilities.

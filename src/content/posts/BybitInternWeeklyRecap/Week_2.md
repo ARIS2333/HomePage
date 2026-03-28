@@ -4,11 +4,10 @@ published: 2026-02-08
 pinned: false
 category: Weekly Recap
 draft: false
+description: CrossCurve Hack Report; LayerZero Cross-Chain Protocol; Nest RWA Protocol
 ---
 
 📅 02/02/2026 – 08/02/2026
-
-This was my second week as a Smart Contract Auditor Intern at Bybit.
 
 This week, a significant attack targeted the **CrossCurve Cross-Chain Bridge**, resulting in millions of dollars in losses. I believe I was the first to post a detailed attack flow analysis on X. While the attack itself was not highly complex, I gained a lot from dissecting it. I learned how to analyze attack flows using different tools, and I feel more confident handling future attack analyses.
 

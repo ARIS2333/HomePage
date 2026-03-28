@@ -4,13 +4,12 @@ published: 2026-02-01
 pinned: false
 category: Weekly Recap
 draft: false
+description: Join Bybit; Hyperlane cross-chain protocol
 ---
 
 📅 26/01/2026 – 01/02/2026
 
-This was my first week as a Smart Contract Auditor Intern at Bybit.
-
-I’m grateful to have an nice team lead and a supportive buddy guiding me. Their help has made my onboarding process smooth and motivating.
+This is my first working at Bybit.
 
 This week I focused on **cross-chain bridges**, starting with a security research deep dive into the **Hyperlane protocol**.
 
