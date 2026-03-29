@@ -272,53 +272,7 @@ This recursive elegance—shifting between creating Leaves when isolated, Extens
 
 Below figure shows how whole process as we described above:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Root as root() / caller
-    participant P0 as patricialize<br/>(level=0)
-    participant P1_3 as patricialize<br/>(level=1, slot=3)
-    participant P3 as patricialize<br/>(level=3)
-    participant P4 as patricialize<br/>(level=4)
-    participant P1_8 as patricialize<br/>(level=1, slot=8)
-
-    Root->>P0: {K1, K2, K3}, level=0
-    Note over P0: No common prefix.<br/>Action: Create BranchNode
-    
-    %% Going down Branch Slot 3
-    P0->>P1_3: {K1, K2}, level=1
-    Note over P1_3: Shared prefix: [7, a] (len: 2)<br/>Action: Create ExtensionNode
-    
-    %% Recursing past the Extension Node
-    P1_3->>P3: {K1, K2}, level=3
-    Note over P3: No common prefix.<br/>Action: Create BranchNode
-    
-    %% Going down Branch Slot 2 for K1
-    P3->>P4: {K1}, level=4 (Branch Slot 2)
-    Note over P4: len(obj) == 1<br/>Action: Create LeafNode
-    P4-->>P3: return LeafNode(K1)
-    
-    %% Going down Branch Slot 5 for K2
-    P3->>P4: {K2}, level=4 (Branch Slot 5)
-    Note over P4: len(obj) == 1<br/>Action: Create LeafNode
-    P4-->>P3: return LeafNode(K2)
-    
-    %% Unwinding back to Extension
-    P3-->>P1_3: return BranchNode (slots 2 & 5 populated)
-    
-    %% Unwinding back to Root Branch
-    P1_3-->>P0: return ExtensionNode (prefix [7, a])
-    
-    %% Going down Branch Slot 8 for K3
-    P0->>P1_8: {K3}, level=1
-    Note over P1_8: len(obj) == 1<br/>Action: Create LeafNode
-    P1_8-->>P0: return LeafNode(K3)
-    
-    Note over P0: (The other 14 empty branch<br/>slots return None)
-    
-    %% Final Return
-    P0-->>Root: return BranchNode (slots 3 & 8 populated)
-```
+![image.png](EELS(2)%20Code%20Implementation%20of%20Merkle-Patricia%20Tri/image%206.png)
 
 Here is the resulting tree structure in memory:
 
