@@ -298,7 +298,7 @@ Immediately after a7, the keys diverge at the third nibble: **1**, **7**, and
 
 Each path ends in a **Leaf Node** containing the unique "suffix" of the key and the actual account data (balance, nonce, etc.).
 
-- Key 1 leaf stores: 11355 + Value 1
+- Key 1 leaf stores: 1355 + Value 1
 - Key 2 leaf stores: d337 + Value 2
 - Key 3 leaf stores: 9365 + Value 3
 
