@@ -21,10 +21,10 @@ import { LinkPreset } from "./types/config";
 const SITE_LANG = "en"; // 语言代码，例如：'en', 'zh_CN', 'ja' 等。
 const SITE_TIMEZONE = 8; //设置你的网站时区 from -12 to 12 default in UTC+8
 export const siteConfig: SiteConfig = {
-	title: "Mizuki",
-	subtitle: "One demo website",
-	siteURL: "https://mizuki.mysqil.com/", // 请替换为你的站点URL，以斜杠结尾
-	siteStartDate: "2025-01-01", // 站点开始运行日期，用于站点统计组件计算运行天数
+	title: "Kehao Zheng's Website",
+	subtitle: "",
+	siteURL: "https://kehaozheng.vercel.app/", // 请替换为你的站点URL，以斜杠结尾
+	siteStartDate: "2025-12-15", // 站点开始运行日期，用于站点统计组件计算运行天数
 
 	timeZone: SITE_TIMEZONE,
 
@@ -50,7 +50,7 @@ export const siteConfig: SiteConfig = {
 	// 顶栏标题配置
 	navbarTitle: {
 		// 顶栏标题文本
-		text: "Kevin's Blog",
+		text: "Kehao Zheng's Website",
 		// 顶栏标题图标路径，默认使用 public/assets/home/home.png
 		icon: "assets/home/home.png",
 	},
@@ -129,11 +129,12 @@ export const siteConfig: SiteConfig = {
 
 		homeText: {
 			enable: true, // 在主页显示自定义文本
-			title: "Kevin's Blog", // 主页横幅主标题
+			title: "Welcome", // 主页横幅主标题
 
 			subtitle: [
-				"Welcome to my blog",
-				"Walk around and explore",
+				"I'm a CS PhD Student at USU",
+				"My focus is AI & Blockchain",
+				"Feel free to explore my blog!",
 			],
 			typewriter: {
 				enable: true, // 启用副标题打字机效果
@@ -323,8 +324,8 @@ export const navBarConfig: NavBarConfig = {
 
 export const profileConfig: ProfileConfig = {
 	avatar: "assets/images/avatar.png", // 相对于 /src 目录。如果以 '/' 开头，则相对于 /public 目录
-	name: "Kevin Zheng",
-	bio: "CS PhD Student & BlockChain Security Auditor",
+	name: "Kehao Zheng",
+	bio: "Click the avatar to see more info",
 	typewriter: {
 		enable: false, // 启用个人简介打字机效果
 		speed: 80, // 打字速度（毫秒）

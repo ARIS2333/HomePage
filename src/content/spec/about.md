@@ -1,5 +1,9 @@
-Hi, my name is Kevin Zheng. I am 23 years old and originally from China. I earned my bachelor’s degree in Physics, studying in both China and Israel. I will soon begin my PhD in Computer Science at Utah State University in the United States.
+Hi, I'm **Kehao Zheng**. I'm a 23-year-old researcher and developer originally from China. I earned my **bachelor’s degree in Physics**, studying in both *China (Shandong University)* and *Israel (Bar Ilan University)*, where my research centered on **Brain Network** (you can view one of my publication [[here](https://www.sciencedirect.com/science/article/pii/S0925231225031297)]).
 
-I am currently working as a Smart Contract Auditor Intern at Bybit, where I have learned a great deal about blockchain security. While I am familiar with common smart contract attack vectors, this experience has especially strengthened my understanding of cross - chain bridge systems, including LayerZero, CCTP, and Hyperlane.
+Currently, I am pursuing my **Ph.D. in Computer Science** at **Utah State University**. My research focuses on **AI in Education** —specifically, *leveraging AI to make computer science education more accessible and engaging for students across all majors* (view one of my publication [[here](https://sigcse2026.sigcse.org/details/sigcse-ts-2026-posters/9/CodeFlow-LLM-Generated-Flowchart-Feedback-for-Programming-Students)]).
 
-Outside of academics and technology, I love photography — you can find my works by clicking the Instagram icon below my avatar. I also enjoy reading and explore a wide range of topics such as psychology, spirituality, and investment.
+Before moving to the US, I worked as a **Blockchain Security Auditor at Bybit** (Jan–Aug 2026). I initially specialized in **smart contract attack vectors**, which allowed me to transition deeper into *blockchain infrastructure*. I focused heavily on **Ethereum**’s core mechanisms, including the design of its **execution and consensus clients**.
+
+On this website, I share articles detailing my work, complete with visual breakdowns and code explanations. While some of my security work remains confidential under NDA, I've curated public-facing projects that I hope serve as highly practical learning resources.
+
+Outside of academia and tech, I love photography—you can check out my work by clicking the Instagram icon below my avatar. I stay active by running 3km every day, and I'm a passionate traveler. My solo adventures have taken me all over China and Hong Kong, as well as across Japan, Israel, and Istanbul.
