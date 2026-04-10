@@ -1,6 +1,6 @@
 ---
 title: EELS(9) Block Execution and State Transition
-published: 2026-04-10
+published: 2026-04-06
 pinned: false
 description: Ethereum block execution pipeline, orchestrates all the things introduced previously
 tags: [BlockChain,Ethereum,EELS]
