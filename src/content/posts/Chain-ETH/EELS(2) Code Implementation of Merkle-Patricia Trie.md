@@ -1,6 +1,6 @@
 ---
 title: EELS(2) Code Implementation of Merkle-Patricia Trie
-published: 2026-03-28
+published: 2026-03-30
 pinned: false
 description: Demystifying the MPT using a code-driven walkthrough
 tags: [BlockChain,Ethereum,EELS]
