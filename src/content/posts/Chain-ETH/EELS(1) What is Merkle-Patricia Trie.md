@@ -13,539 +13,561 @@ draft: false
 1. [Preface](#preface)
 2. [Introduction](#introduction)
 3. [Theoretical Background](#theoretical-background)
-    - [Merkle Tree](#merkle-tree)
-    - [Trie](#trie)
-    - [Patricia Trie](#patricia-trie)
+   - [Merkle Tree](#merkle-tree)
+   - [Trie](#trie)
+   - [Patricia Trie](#patricia-trie)
+   - [Combining the Best of Both Worlds](#combining-the-best-of-both-worlds)
 4. [MPT Breakdown](#mpt-breakdown)
-    - [Understanding the "Key" in Ethereum](#understanding-the-key-in-ethereum)
-    - [Nodes in MPT](#nodes-in-mpt)
-    - [Key Encoding in the MPT](#key-encoding-in-the-mpt)
-    - [An Example of MPT Evolution](#an-example-of-mpt-evolution)
-5. [Optimization in Geth](#optimization-in-geth)
-    - [The Memory Layer: Geth's nodeFlag](#the-memory-layer-geths-nodeflag)
-    - [The Persistence Layer: Content-Addressed Storage](#the-persistence-layer-content-addressed-storage)
-    - [Practical Workflow: Lazy Loading](#practical-workflow-lazy-loading)
+   - [Understanding the "Key" in Ethereum](#understanding-the-key-in-ethereum)
+   - [Node Types in the MPT](#node-types-in-the-mpt)
+   - [Inline Nodes vs. Hash References](#inline-nodes-vs-hash-references)
+   - [Key Encoding in the MPT](#key-encoding-in-the-mpt)
+   - [A Worked Example: MPT Evolution](#a-worked-example-mpt-evolution)
+5. [From Theory to Implementation: Geth Internals](#from-theory-to-implementation-geth-internals)
+   - [In-Memory Representation: nodeFlag and Node Types](#in-memory-representation-nodeflag-and-node-types)
+   - [On-Disk Persistence: Content-Addressed Storage](#on-disk-persistence-content-addressed-storage)
+   - [Lazy Loading: Traversing Without Full State](#lazy-loading-traversing-without-full-state)
+   - [What Is Actually Stored in LevelDB?](#what-is-actually-stored-in-leveldb)
 6. [The Four MPTs of Ethereum](#the-four-mpts-of-ethereum)
-    - [The State Trie (Global & Persistent)](#the-state-trie-global--persistent)
-    - [The Storage Trie (Per-Contract)](#the-storage-trie-per-contract)
-    - [The Transaction Trie (Per-Block)](#the-transaction-trie-per-block)
-    - [The Receipt Trie (Per-Block)](#the-receipt-trie-per-block)
 7. [Reference](#reference)
 
 ---
 
 # Preface
 
-This article is part of a series analyzing the core components of Ethereum through the **Ethereum Execution Layer Specification (EELS)**. 
+This article is the first in a series analyzing the core components of Ethereum through the **Ethereum Execution Layer Specification (EELS)**.
 
 **What is EELS?**
-EELS is a Python reference implementation of the Ethereum execution client, designed with a focus on readability and clarity. It serves as a programmer-friendly, up-to-date successor to the original Yellow Paper and is the primary tool for prototyping new Ethereum Improvement Proposals (EIPs). EELS provides complete protocol snapshots at each fork and rendered diffs between them.
+EELS is a Python reference implementation of the Ethereum execution client, designed with a focus on readability and clarity. It serves as a programmer-friendly, up-to-date successor to the original Yellow Paper, and is the primary tool for prototyping new Ethereum Improvement Proposals (EIPs). EELS provides complete protocol snapshots at each fork with rendered diffs between them.
 
-**Scope and Implementation**
-Note that EELS does not implement the JSON-RPC API or P2P networking. To validate blocks, it requires an external RPC provider to fetch data, which EELS then processes and stores in a local database.
+**Scope and Limitations**
+EELS does not implement the JSON-RPC API or P2P networking layer. To validate blocks, it requires an external RPC provider to supply raw data, which EELS then processes and stores in a local database.
 
 **Version Reference**
-The code analysis in this article is based on the **Osaka** fork: 
-[ethereum/execution-specs (Osaka)](https://github.com/ethereum/execution-specs/tree/forks/amsterdam/src/ethereum/forks/osaka)
+The code analysis in this article is based on the **Osaka** fork of the execution specs:
+[ethereum/execution-specs](https://github.com/ethereum/execution-specs)
 
 ---
 
 # Introduction
 
-In Ethereum, the "State" is everything. Every account balance, every smart contract variable, and every transaction receipt must be stored in a way that is both **efficient to access** and **cryptographically immutable**. The Merkle-Patricia Trie is the "backbone" of this system. Before we can dive into the Python code of EELS to see how transactions are executed or how blocks are validated, we must first understand the "container" that holds all of Ethereum’s data. 
+In Ethereum, **state is everything**. Every account balance, every smart contract storage variable, and every transaction receipt must be stored in a way that is simultaneously efficient to access and cryptographically verifiable. The **Merkle-Patricia Trie (MPT)** is the data structure that satisfies both requirements.
 
-In this first installment of the series, we will peel back the layers of the MPT. We will discuss:
+Before we can read the EELS source code to understand transaction execution or block validation, we must understand the container that holds all of Ethereum's data. This first installment peels back the layers of the MPT:
 
-*   **The Evolution of the Trie:** How Ethereum combines the integrity of Merkle Trees with the retrieval speed of Patricia Tries.
-*   **The Anatomy of a Node:** A deep dive into the four types of nodes that make the tree both compact and searchable.
-*   **The Three Faces of a Key:** Why Ethereum keys transform between 3 encoding methods as they move from memory to disk.
-*   **From Theory to Specification:** How these logical concepts are optimized in real-world clients like Geth.
+- **The Building Blocks:** How Ethereum combines the cryptographic integrity of Merkle Trees with the retrieval efficiency of Patricia Tries.
+- **The Anatomy of a Node:** A deep dive into the four node types that make the trie both compact and verifiable.
+- **The Three Faces of a Key:** Why Ethereum keys are transformed between three encoding formats as they move from user input to in-memory traversal to on-disk storage.
+- **The Persistence Model:** What Geth actually writes to LevelDB, including the critical inline-node optimization and the reality of how account data is stored.
 
-**What you will learn:**
-By the end of this article, you will understand how Ethereum can prove the existence of a single transaction among millions using only a few amount of data. This architectural understanding is the essential prerequisite for reading the EELS source code and understanding how the Ethereum "World State" actually functions.
+By the end of this article, you will understand how Ethereum can cryptographically prove the existence (or absence) of a single account among millions using only a short sequence of hashes, and why this design is essential for both full nodes and light clients.
 
 ---
 
-# **Theoretical Background**
+# Theoretical Background
 
-To understand the Merkle-Patricia Trie (MPT), we must first break down its constituent parts: the **Merkle Tree**, the **Trie**, and the **Patricia Trie**.
+To understand the MPT, we must first decompose its constituent parts: the **Merkle Tree**, the **Trie**, and the **Patricia Trie**.
 
-
-Broadly speaking, MPT is a data structure combining the advantages of both the Merkle Tree and the Patricia Trie: the former provides data integrity verification through upward hash propagation, while the latter enables efficient key-value retrieval via prefix path compression.
+At a high level, the MPT fuses two complementary strengths: the Merkle Tree contributes **cryptographic integrity** via upward hash propagation, while the Patricia Trie contributes **efficient key-value lookup** via prefix-based path compression.
 
 ---
 
 ## Merkle Tree
 
-Invented by Ralph Merkle in 1988, Merkle Trees are a foundational cryptographic data structure. They allow for the efficient verification of large datasets without requiring a user to download or process the entire database.
+Ralph Merkle introduced Merkle Trees in his 1979 doctoral dissertation at Stanford. They are a foundational cryptographic primitive that allows the integrity of a large dataset to be verified without downloading the entire dataset.
 
-### **How it Works**
+### How It Works
 
-In a Merkle Tree, data blocks (such as transactions) are grouped at the bottom as "leaves." Each leaf is hashed, and pairs of these hashes are hashed together to form a parent node. This process continues up the tree until a single hash remains at the top: the **Merkle Root**.
+Data items (such as transactions) sit at the bottom of the tree as **leaves**. Each leaf is hashed individually. Then, pairs of leaf hashes are hashed together to form parent nodes. This process repeats up the tree until a single hash remains: the **Merkle Root**.
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image.png)
+![Merkle Tree structure](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image.png)
 
-This structure creates a "digital fingerprint" of the entire dataset. Because of the nature of cryptographic hashing:
+This structure creates a compact "digital fingerprint" of the entire dataset. The properties of cryptographic hash functions guarantee:
 
-- **Integrity:** Any change to a single data block (e.g., D_1) changes its hash (N_1), which changes its parent’s hash (N_4), eventually resulting in a completely different **Root**.
-- **Efficiency:** To locate a modification or verify a specific piece of data, we only need to follow the path from the root down to the leaf. In a tree with n elements, this takes only **O(log n)** time.
+- **Integrity:** Changing any single leaf (e.g., D1) propagates upward — its hash changes, its parent's hash changes, and ultimately the Root changes. Tampering is immediately detectable.
+- **Efficiency:** Locating a modification or verifying a leaf requires traversing only from the root to that leaf: **O(log n)** operations.
 
-For example, once it is found that the value of a node such as Root has changed, along the path Root --> N4 --> N1, the actually modified data block D1 can be quickly located in at most O(lgN) time.
+For example, once a discrepancy is detected at the Root, we can follow the path Root → N4 → N1 to locate the modified data block D1 in at most O(log n) steps.
 
-### **Typical Applications**
+### Applications
 
-- **Efficient Integrity Checks:**
-    
-    Instead of comparing two massive databases bit-by-bit, systems can simply compare their Merkle Roots. If the roots match, the data is identical.
-    
-- **Proving Membership:**
-    
-    A user can prove that a specific transaction exists in a block without downloading the whole block. By providing the transaction's Merkle Path (the hashes of its "sibling" nodes at each level), a light client can re-calculate the root and see if it matches the official block header. This Merkle Path is called a **Merkle Proof**.
-    
-- **Non-Existence Proofs:**
-    
-    By sorting the data and using "null" values for empty leaves, a Merkle Tree can also prove that a specific piece of data is **not** included in the set.
-    
+**Efficient integrity checks:** Rather than comparing two large databases byte-by-byte, systems compare only their Merkle Roots. Equal roots imply equal datasets.
 
-### **Advantage**
+**Membership proofs (Merkle Proofs):** A user can prove that a specific transaction exists in a block without downloading the full block. By providing the transaction and the hashes of its sibling nodes at each level (the "Merkle path"), a light client can recompute the root and check it against the trusted block header.
 
-- **Fast Rehashing (Incremental Updates):**
-    
-    If one piece of data changes, you do not need to re-hash the entire tree. You only need to recalculate the hashes for the nodes along the path from that specific leaf to the root.
-    
-- **Enabling "Light Nodes":**
-    
-    Merkle Trees allow low-power devices (like smartphones) to participate in the network. A **Light Node** only stores the 80-byte block headers containing the Merkle Root. It relies on full nodes to provide the necessary "Merkle Paths" to verify specific transactions on demand.
-    
-    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%201.png)
-    
+**Non-existence proofs:** Standard Merkle Trees do not natively support non-membership proofs. Special constructions — such as sorted Merkle trees or Sparse Merkle Trees (SMTs) — are required for this. In Ethereum's MPT specifically, non-membership is proven by demonstrating that following the key's path through the trie yields a null node or a mismatched partial key, rather than the target leaf.
 
-### **Disadvantage**
+### Advantages
 
-- **Storage Overhead:**
-    
-    While efficient for verification, Merkle Trees require storing all the intermediate hashes (internal nodes). This increases the total storage footprint compared to a simple flat list of data.
-    
-- **Static Structure:**
-    
-    Standard Merkle Trees are typically "static." If you want to add or remove an element without just updating an existing one, the tree may need to be entirely restructured, which can be computationally expensive. (This is exactly where the **Trie** structure helps Ethereum).
-    
+- **Incremental rehashing:** When one piece of data changes, only the O(log n) nodes on the path from that leaf to the root need to be rehashed.
+- **Light client support:** Devices with limited storage can participate in the network by storing only block headers (containing the Merkle Root) and requesting on-demand proofs from full nodes.
+
+![Light node requesting a Merkle proof from a full node](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%201.png)
+
+### Limitations
+
+- **Storage overhead:** All intermediate hash nodes must be stored in addition to the leaf data.
+- **Position-based organization:** Standard Merkle Trees index data by position (0, 1, 2, …), not by an arbitrary key. This makes them unsuitable for key-value lookups where keys are not pre-assigned integer positions. This is precisely the gap that the **Trie** structure addresses.
 
 ---
 
 ## Trie
 
-The terms **Tree** and **Trie** are often confused, but they represent fundamentally different concepts. In a standard **Tree**, nodes are arranged based on the logical structure of the data, and the relationship between nodes is independent of a "key." In contrast, the structure of a **Trie** (derived from "re**trie**val") is determined entirely by the **content of the key**.
+The word *trie* is derived from "re**trie**val." Unlike a standard tree — where the relationships between nodes depend on the application's data model — in a **trie**, the position of a node is determined entirely by the key used to store it. Following the path from the root to any node spells out the key associated with the data at that node.
 
-In a Trie, the path from the root to a leaf represents the key itself. Its primary purpose is to enable rapid data location through prefix matching.
+### How It Works
 
-### How it Works
+A trie stores keys by decomposing them into individual characters or symbols. Each edge in the tree represents one character, and traversing from root to a leaf spells out the key.
 
-A Trie stores keys by breaking them down into individual characters or symbols. Each step down the tree corresponds to one character in the key.
+![Trie with shared prefixes — Ball, Bat, Bear](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%202.png)
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%202.png)
+Multiple keys sharing a common prefix share the same path from the root down to the point where they diverge. In a typical implementation for English words, each node is an array of 27 pointers: indices 0–25 for letters 'a'–'z', and one slot for a terminator indicating a valid word ends here.
 
-As shown in the above figure, multiple strings can share the same path if they share a common prefix. For example, the words "Ball" and "Bat" both branch off the "B" → "a" path. The $ symbol acts as a "terminator," indicating that a valid string ends at that specific node.
+![Internal trie node as an array of 27 slots, most null](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%203.png)
 
-In a technical implementation (such as storing English words), each node is typically an array of pointers. For the English alphabet, a node might contain 27 slots: indices 0–25 represent the characters 'a' through 'z', and the 26th slot serves as a marker for the end of a string.
-
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%203.png)
-
-As seen in the figure, while this allows for direct indexing, it often results in many "NULL" pointers, as not every node will have a child for every possible letter.
+This direct-indexing structure is fast, but results in many null pointers in sparse datasets.
 
 ### Advantages
 
-- **High Efficiency for Prefix Queries:**
-Unlike a Hash Table, which requires a full scan (O(n)) to find all keys starting with a specific prefix (e.g., "Ba"), a Trie only needs to traverse the path to the "Ba" node. From there, it simply explores the sub-tree. This makes it ideal for autocomplete and "starts with" searches.
-- **No Hash Collisions:**
-Because each key has a unique path defined by its characters, Tries do not suffer from the collision issues found in Hash Tables, ensuring deterministic lookup paths.
+- **Prefix queries in O(m):** Finding all keys with a given prefix requires traversing only to the prefix's node and then exploring its subtree. Hash tables require a full scan for this operation.
+- **No hash collisions:** Each key's unique sequence of characters defines a unique path. No two distinct keys share the same path.
 
 ### Disadvantages
 
-- **Lookup Latency and I/O Overhead:**
-While a Hash Table offers O(1) average lookup time, a Trie requires O(m) time, where m is the length of the key. Furthermore, in a database context, every character transition may represent a separate disk I/O operation, which can be significantly slower than a single direct lookup.
-- **Space Inefficiency:**
-If a key is very long and does not share a prefix with any other keys, the Trie must still create a unique node for every single character in that string. This creates a chain of "single-child" nodes that consume significant memory and storage without branching.
+- **O(m) lookup per key length:** A trie lookup requires one step per character in the key.
+- **Space inefficiency for long, unique keys:** If a key is very long and shares no prefix with other keys, the trie must allocate a separate node for each character, creating a chain of single-child nodes. This is particularly wasteful in a blockchain context where keys are typically 32-byte (256-bit) hashes.
 
 ---
 
 ## Patricia Trie
 
-The space inefficiency of the standard Trie is a major hurdle for blockchain state storage. To solve this, we use the **Patricia Trie**, which "compresses" these long, unbranching paths into single nodes to save space and reduce the number of I/O steps.
+The **Patricia Trie** (Practical Algorithm To Retrieve Information Coded In Alphanumeric) solves the space inefficiency of the standard trie by **collapsing chains of single-child nodes into a single edge labeled with the entire shared substring**.
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%204.png)
+![Standard Trie vs. Patricia Trie — path compression of long unique keys](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%204.png)
+
+Rather than creating one node per character along an unbranched path, the Patricia Trie stores the entire shared segment as a single edge label. This reduces both the depth of the tree and the number of database lookups required for traversal.
 
 ---
 
-### Combining the Best of Both Worlds
+## Combining the Best of Both Worlds
 
-Before we dive into the **Merkle-Patricia Trie**, let’s summarize the core strengths we inherit from the two structures discussed:
+The **Merkle-Patricia Trie** unifies these two structures:
 
-| **From the Merkle Tree (Security)** | **From the Patricia Trie (Efficiency)** |
-| --- | --- |
-| **Hierarchical Hashing:** Every node stores a hash of its children, ensuring the Root Hash represents the entire dataset. | **Prefix-Based Paths:** Data is organized by keys, enabling efficient insertion, deletion, and prefix-based lookups. |
-| **Tamper-Evidence:** Any change to a leaf node propagates upward, immediately invalidating the Root Hash. | **Path Compression:** Long, non-branching paths are compressed into single nodes, drastically reducing the tree's depth and storage overhead. |
-| **Light Client Verification:** Allows "Light Nodes" to verify the existence of specific data without downloading the entire state. | **Deterministic Structure:** For any given set of key-value pairs, there is exactly one unique Trie representation, avoiding the unpredictability of hash tables. |
+| From the Merkle Tree (Security) | From the Patricia Trie (Efficiency) |
+|---|---|
+| Every node stores a hash of its children, making the root hash a commitment to the entire dataset | Keys define paths; the tree is organized for efficient prefix-based lookup |
+| Any modification to any leaf propagates upward to invalidate the root hash | Long non-branching paths are compressed into single nodes |
+| Light clients can verify membership with a short proof path | For any given set of key-value pairs, there is exactly one unique trie structure (determinism) |
+
+**Determinism** deserves emphasis: given the same key-value pairs, the MPT **always produces the same root hash**, regardless of insertion order. This property is what allows every Ethereum node to independently compute and agree on the same State Root.
 
 ---
 
 # MPT Breakdown
 
-The core logic of the Merkle-Patricia Trie (MPT) is beautifully simple: **Use the Trie structure to organize data, and use the Merkle Tree's hashing mechanism to secure it.**
-
-In an MPT, the **skeleton is a Trie**—you follow a path based on a key to reach your data. However, **every node is also a Merkle node**—it contains the cryptographic hash of its children. This fusion allows Ethereum to manage a massive, constantly changing state (millions of accounts and balances) while providing a single "State Root" hash that guarantees the integrity of every single piece of data in the network.
+The core design of the MPT is straightforward: organize data using a trie (navigated by key nibbles), and secure the entire structure using Merkle-style hash chaining. Every node in the MPT is referenced by the hash of its contents (or inlined directly when small — more on this shortly), so the root hash cryptographically commits to every piece of data in the tree.
 
 ## Understanding the "Key" in Ethereum
 
-Previously we discussed the trie using English words as keys. In Ethereum, a key is typically the `keccak256` hash of an entity, such as an account address or a smart contract storage slot. This hash is represented as a hexadecimal string, e.g.
+In a toy trie, keys might be English words. In Ethereum, the key for a state trie entry is `keccak256(account_address)` — a 32-byte (64 hex character) value. For illustration we use the shortened form:
 
 ```
-**a711355**
+a711355
 ```
 
-In practice this should be 32 bytes, but let's use this short one for simplicity. The MPT processes this key by breaking it down into **nibbles** (a nibble is half a byte, representing a single hexadecimal character from `0` to `f`). The path you take through the MPT is determined exactly by the sequence of nibbles in the key.
+In practice this is a full 64-nibble hex string, but the short form demonstrates all the structural concepts.
+
+Hashing addresses before using them as trie keys serves two purposes: (1) it produces fixed-length, uniformly distributed keys regardless of address distribution, and (2) it prevents adversarial key crafting that could produce pathologically deep tries.
+
+The MPT processes keys as sequences of **nibbles** — 4-bit units, each representing one hex digit (`0`–`f`). A 32-byte key becomes a 64-nibble path. Each step down the tree consumes one nibble, which is why Branch Nodes have exactly 16 children slots.
 
 ---
 
-## Nodes in MPT
+## Node Types in the MPT
 
-To optimize storage and avoid the "sparse node" problem of standard Tries, Ethereum's MPT utilizes four distinct types of nodes.
+To avoid the "sparse node" problem of standard tries, Ethereum's MPT defines four distinct node types.
 
 ### 1. Null Node
 
-The simplest node. It represents an empty tree or an empty branch. In the code, it is simply represented as an empty string.
+The simplest node. Represents an empty tree or an empty slot within a Branch. Encoded as an empty byte string `""` in RLP.
 
 ### 2. Branch Node
 
-A Branch Node is used when paths diverge. Because keys are made of hex characters (`0`-`f`), there are 16 possible directions a path can take at any given fork. Therefore, a Branch Node contains **17 items: `[v0, v1, ..., v15, value]`**.
+Used wherever the path diverges into two or more directions. A Branch Node is a 17-element list:
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%205.png)
+```
+[child_0, child_1, ..., child_15, value]
+```
 
-Think of a Branch Node as a major intersection:
+![Branch Node with 16 child slots (0x0–0xf) and one value slot (index 16)](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%205.png)
 
-- **Slots 0 to 15:** These correspond to the 16 possible hex nibbles. Each slot is either `null` (if no keys go down that path) or contains the cryptographic hash pointing to the next child node. For example, if the current nibble is `a`, you look at slot 10 (which is `a` in hex) to search for the next node.
-- **Slot 16:** Occasionally, a key's path ends *exactly* at this Branch Node. If so, the value for that key is stored in this final slot.
+- **Slots 0–15:** One slot per hex nibble. Each slot contains either null (no child in that direction) or a **node reference** pointing to the next child node. (Node references are explained in detail in the next section.)
+- **Slot 16:** If a key terminates exactly at this branch node (i.e., no remaining nibbles), the associated value is stored here. Otherwise it is empty.
 
 ### 3. Leaf Node
 
-A Leaf Node represents the end of a path.
+Used when a path reaches its unique endpoint — no other keys in the trie share this terminal path segment. A Leaf Node has two fields:
 
-In a standard Trie, if you have a long key but no other keys share its path, you would have to create a long chain of empty branch nodes just to store it. The MPT optimizes this by using a Leaf Node, which contains **2 items: `[encodedPath, value]`**.
+```
+[encodedPath, value]
+```
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%206.png)
+![Leaf Node with remaining path "11355" and encoded account data as value](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%206.png)
 
-As shown in the figure, when a path reaches a point where **there are no more branches**, the MPT bundles the remaining nibbles together.
-
-- **`encodedPath`**: The remaining portion of the key (e.g., `"11355"`).
-- **`value`**: The actual target data (e.g., the account balance, nonce, etc.).
-
-By packing these together, the MPT saves significant storage space.
+- **`encodedPath`:** The remaining nibble sequence (the part of the key not yet consumed by parent nodes), encoded using HP encoding (described in the next section).
+- **`value`:** The actual data payload. In the **state trie**, this is the RLP encoding of `[nonce, balance, storageRoot, codeHash]`. In the **storage trie**, it is the RLP encoding of the slot value.
 
 ### 4. Extension Node
 
-An Extension Node is another compression mechanism, but it is used for *shared prefixes* rather than endpoints. It also contains **2 items: `[encodedPath, hash]`**.
+Used when multiple keys share a long common prefix before they diverge. Rather than creating a Branch Node for every shared nibble, an Extension Node compresses the entire shared segment:
 
-When multiple keys share a long common sequence of nibbles before they finally branch off, creating a Branch Node for every single shared character is wasteful. Instead, an Extension Node compresses that shared path.
+```
+[encodedPath, nodeReference]
+```
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%207.png)
+![Extension Node with "a7" prefix pointing to a Branch Node](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%207.png)
 
-- **`encodedPath`**: The shared prefix common to multiple keys (e.g., `"a7f"`).
-- **`hash`**: A cryptographic pointer to the next node (usually a Branch Node) where the paths finally split. The system uses this hash to look up the next node in the underlying database (like LevelDB).
+- **`encodedPath`:** The shared nibble sequence, stored using HP encoding.
+- **`nodeReference`:** A pointer to the next node (typically a Branch Node where the paths diverge). This reference is either an inline embedding or a 32-byte hash — explained in the next section.
 
-Because both Leaf and Extension nodes look structurally identical (both contain 2 items: `[encodedPath, target]`), how does the Ethereum protocol differentiate them?
+**Distinguishing Leaf from Extension:** Both are 2-element lists. The HP encoding's prefix nibble (detailed in the later section) differentiates them: leaf paths carry a flag bit set to 1, extension paths to 0.
 
-The answer lies in a special **prefix flag bit** hidden inside the `encodedPath`.
+### Node Summary
 
-- If the flag indicates an **Extension Node**, the system knows the second field is a *hash* pointing to another node, meaning the journey continues.
-- If the flag indicates a **Leaf Node**, the system knows the second field is the *actual value*, meaning the path has terminated.
+![Full MPT overview — Extension, Branch, and Leaf nodes](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/Gemini_Generated_Image_347jbs347jbs347j.png)
 
-We will discuss this prefix flag in the next section.
+| Node Type | When Used | Structure |
+|---|---|---|
+| **Extension** | Multiple keys share a non-branching common prefix | `[encodedPath, nodeReference]` |
+| **Branch** | Paths diverge in two or more directions | `[child_0, …, child_15, value]` |
+| **Leaf** | Path terminates uniquely at this node | `[encodedPath, value]` |
+| **Null** | Empty slot or empty tree | `""` (empty bytes) |
+
+**Quick example:** For keys `a711355`, `a77d337`, and `a7f9365`:
+
+1. An **Extension Node** stores the shared prefix `a7` and points to a Branch Node.
+2. The **Branch Node** routes on the third nibble: slot `1` → first key, slot `7` → second key, slot `f` → third key.
+3. Three **Leaf Nodes** store the remaining suffixes (`11355`, `7d337`, `9365`) and their associated account data.
+
+![Three-key MPT example with Extension, Branch, and Leaf nodes](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%208.png)
 
 ---
 
-To conclude this section on the MPT nodes, let’s put all the things together.
+## Inline Nodes vs. Hash References
 
-![Gemini_Generated_Image_347jbs347jbs347j.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/Gemini_Generated_Image_347jbs347jbs347j.png)
+In MPT, **Not all child references are 32-byte hashes.**
 
-| **Node Type** | **Context / Usage** | **Contents** |
-| --- | --- | --- |
-| **Extension** | When multiple keys share a common prefix; used to "compress" the path. | Shared prefix + Hash of the next node. |
-| **Branch** | When paths diverge (a fork in the road). | 16 slots (0–f) for children + 1 slot for an optional value. |
-| **Leaf** | When the path no longer branches and reaches its conclusion. | Remaining unique path + Actual data (value). |
-| **Null** | When a specific path or slot is empty. | An empty string (null). |
+The Ethereum Yellow Paper specifies a size-based rule for how a node reference is computed:
 
-Imagine we need to store three accounts in the Ethereum state with the following keys:
+> If the RLP encoding of a node is **fewer than 32 bytes**, the RLP-encoded node is embedded (inlined) directly into its parent.  
+> If the encoding is **32 bytes or more**, the node is stored in the database under key `keccak256(RLP(node))`, and the 32-byte hash is used as the reference.
 
-1. a711355
-2. a77d337
-3. a7f9365
+Expressed as pseudocode:
 
-the MPT organizes them as follows:
+```python
+def node_reference(node):
+    encoded = RLP(node)
+    if len(encoded) < 32:
+        return encoded                  # Inline: embed the raw RLP directly
+    else:
+        db[keccak256(encoded)] = encoded
+        return keccak256(encoded)       # Hash reference: 32-byte key
+```
 
-**1. The Extension Node:**
+![Inline node vs hash reference decision rule](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/inline_vs_hash.png)
 
-All three keys start with **a7**. To save space, we don't create two separate levels for 'a' and '7'. Instead, we create a single **Extension Node** that stores the shared prefix a7 and points to the next node.
+This optimization has significant practical implications:
 
-**2. The Branch Node:**
+- **Small nodes** (e.g., short leaf nodes in a sparse storage trie) are inlined into their parent, eliminating a database round-trip.
+- **Large nodes** (e.g., a Branch Node with many populated children) are stored separately and referenced by hash.
+- **Proof sizes** are affected: inlined nodes are not separate database entries, so a Merkle proof embeds their RLP data directly rather than providing a hash for the verifier to look up.
 
-Immediately after a7, the keys diverge at the third nibble: **1**, **7**, and **f**. We use a **Branch Node** to handle this fork.
-
-- Slot 1 points to the leaf for the first key.
-- Slot 7 points to the leaf for the second key.
-- Slot f points to the leaf for the third key.
-
-**3. The Leaf Nodes:**
-
-Each path ends in a **Leaf Node** containing the unique "suffix" of the key and the actual account data (balance, nonce, etc.).
-
-- Key 1 leaf stores: 1355 + Value 1
-- Key 2 leaf stores: d337 + Value 2
-- Key 3 leaf stores: 9365 + Value 3
-
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%208.png)
-
-As shown in the figures, the "pointers" connecting these nodes are not simple memory addresses. They are **RLP-encoded Keccak256 hashes** of the child nodes.
-
-1. We hash the **Leaf Nodes**.
-2. Those hashes are stored in the **Branch Node** slots.
-3. We hash the **Branch Node**, and that hash is stored in the **Extension Node**.
-4. The hash of the Extension Node (the root of this sub-tree) eventually contributes to the **State Root**.
-
-This ensures that if a single balance inside a Leaf Node is tampered with, the hash of that leaf changes, which changes the Branch Node, which changes the Extension Node, and finally results in a completely different **State Root**. This is how Ethereum achieves both efficient lookup and cryptographic integrity in one structure.
+Throughout the rest of this article, whenever we say "node reference," we mean: either an inline RLP encoding, or a 32-byte keccak256 hash — whichever the size rule dictates.
 
 ---
 
 ## Key Encoding in the MPT
 
-In the node definitions above, we referred to fields like encodedPath (e.g., the "a7" in an Extension node or the "11355" in a Leaf node). However, these paths are not stored as simple text strings. 
+A key does not maintain a single fixed form throughout its lifecycle. It transitions between three encoding formats depending on context:
 
-In Ethereum, a key does not maintain a single static form. Instead, it transitions between three different encoding formats depending on where it is being used: the **External Interface**, the **In-Memory Tree**, or the **On-Disk Database**. To manage these keys efficiently—moving from a user's account address to a searchable tree in memory, and finally to a persistent database—Ethereum's MPT transitions between three distinct encoding formats.
-
-| Context | Encoding Type | Purpose |
-| --- | --- | --- |
-| **External Interface** | **Raw Encoding** | Standard byte arrays (e.g., user input "cat"). |
-| **Memory** | **Hex Encoding** | Nibble-based paths used to traverse the tree. |
-| **Disk (LevelDB)** | **Hex-Prefix (HP)** | Compact byte storage that identifies node types. |
-
----
+| Context | Format | Purpose |
+|---|---|---|
+| External API | **Raw** | Raw byte array (e.g., account address bytes) |
+| In-memory traversal | **Hex (nibble)** | Decomposed into nibbles for branch navigation |
+| On-disk storage | **Hex-Prefix (HP)** | Compact byte encoding with embedded node-type flag |
 
 ### Raw Encoding
 
-Raw encoding is the "natural" state of a key—the raw bytes of the string. This is the default format for the MPT’s external APIs.
+The natural format of the key. For example, the string `"cat"` is the byte array `[0x63, 0x61, 0x74]`. This is the format presented to the MPT's public API.
 
-- **Example:** The key `"cat"` is represented as its ASCII bytes: `['c', 'a', 't']`, which is `[0x63, 0x61, 0x74]`.
+### Hex (Nibble) Encoding
 
-### Hex Encoding
+When traversing the trie in memory, we process the key one nibble at a time. Each byte is split into its high and low nibbles:
 
-When the tree is active in memory, we need to traverse it. As we learned earlier, a **Branch Node** has 16 slots (0–f). This means the tree moves one **nibble** (4 bits) at a time, not one full byte (8 bits) at a time.
+```
+'c' = 0x63  →  6, 3
+'a' = 0x61  →  6, 1
+'t' = 0x74  →  7, 4
+```
 
-To facilitate this, we convert the Raw bytes into a sequence of nibbles:
+So `"cat"` becomes the nibble sequence `[6, 3, 6, 1, 7, 4]`.
 
-- `'c' (0x63)` becomes `6, 3`
-- `'a' (0x61)` becomes `6, 1`
-- `'t' (0x74)` becomes `7, 4`
+**The terminator:** In memory, we distinguish Leaf Nodes from Extension Nodes by appending a special terminator nibble `16` (outside the normal 0–15 range) to Leaf Node paths:
 
-**The Terminator (16):**
-The tree also needs a way to distinguish between a **Leaf Node** (the end of a path) and an **Extension Node** (a shortcut to another branch) while in memory. We do this by appending a "terminator" value of `16` (which is outside the hex range of 0–15) to the end of Leaf Node keys.
-
-- **Leaf Node path:** `[6, 3, 6, 1, 7, 4, 16]` (Terminator present)
-- **Extension Node path:** `[6, 3, 6, 1, 7, 4]` (No terminator)
+- **Leaf path:** `[6, 3, 6, 1, 7, 4, 16]` — terminator present
+- **Extension path:** `[6, 3, 6, 1, 7, 4]` — no terminator
 
 ### Hex-Prefix (HP) Encoding
 
-When it is time to save the data to the disk (LevelDB), Hex encoding faces two physical limitations:
+When writing to disk, hex encoding faces two problems:
 
-1. **Byte-Addressability:** Disks store data in bytes. We cannot store a single 4-bit nibble alone; we must pair them up into 8-bit bytes.
-2. **The Terminator Problem:** We cannot store the value `16` as a nibble. We need a more space-efficient way to tell the database whether a node is a Leaf or an Extension.
+1. **Byte alignment:** Disks store bytes (8 bits), not nibbles (4 bits). A nibble sequence must be packed into whole bytes.
+2. **The terminator value 16** cannot be stored as a nibble. We need a compact, byte-aligned way to encode node type and path parity together.
 
-**HP Encoding** solves both by adding a **prefix nibble** to the front of the key. This prefix uses two bits of information:
+HP encoding prepends a single **prefix nibble** to the path. This nibble encodes two bits: the high bit (value 2) is the leaf flag, and the low bit (value 1) is the odd-parity flag:
 
-- **Bit 1:** `1` for Leaf, `0` for Extension.
-- **Bit 0:** `1` if the remaining path length is odd, `0` if it is even.
+| Prefix nibble | Node type | Path length parity | Action |
+|---|---|---|---|
+| `0x0` | Extension | Even | Add padding nibble `0` after prefix |
+| `0x1` | Extension | Odd  | No padding needed |
+| `0x2` | Leaf       | Even | Add padding nibble `0` after prefix |
+| `0x3` | Leaf       | Odd  | No padding needed |
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%209.png)
+![HP encoding table with four cases](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%209.png)
 
-Here we use padding to make sure that, the **total number of nibbles must be even** when ****we eventually combine nibbles into bytes.
+The padding ensures the total number of nibbles is always even, so they can be packed cleanly into bytes.
 
-- If the path length is **Odd**: The 1-nibble prefix acts as the "odd" piece out. Total length = `1 (prefix) + Odd = Even`. .
-- If the path length is **Even**: Adding a 1-nibble prefix would make the total length odd (`1 + Even = Odd`). To fix this, we add a **padding nibble (`0`)** after the prefix. Total length = `1 (prefix) + 1 (padding) + Even = Even`.
+**Worked example — encoding `"cat"` as a Leaf:**
 
----
+![Raw → Hex → HP encoding pipeline for "cat"](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2010.png)
 
-At the end of the encoding section, let’s look at how the key for "cat" moves through the system:
+1. **Raw:** `[0x63, 0x61, 0x74]`
+2. **Hex (memory):** `[6, 3, 6, 1, 7, 4, 16]` — leaf, terminator appended
+3. **HP (disk):**
+   - Path nibbles (strip terminator): `[6, 3, 6, 1, 7, 4]` — even length
+   - Node type = Leaf (bit 1 = 1), parity = Even (bit 0 = 0) → prefix nibble = `0x2`
+   - Even path → pad with `0`: total nibbles = `[2, 0, 6, 3, 6, 1, 7, 4]`
+   - Pack into bytes: `0x20 0x63 0x61 0x74`
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2010.png)
+**Summary:**
 
-1. **Raw (Interface):** `[0x63, 0x61, 0x74]` ("cat")
-2. **Hex (Memory):** We split it into nibbles and add `16` because it's a leaf in this example:
-    
-    `[6, 3, 6, 1, 7, 4, 16]`
-    
-3. **HP (Disk):**
-    - **Step A:** Identify it as a **Leaf** with an **Even** remaining path (`6, 3, 6, 1, 7, 4`).
-    - **Step B:** According to the table, the prefix is `0x2`. Since the path is even, we add a padding `0`, making the full prefix `0x20`.
-    - **Step C:** Prepend the prefix and pair the nibbles into bytes:
-        
-        `20 63 61 74`
-        
-
-In summary,
-
-- **Raw → Hex:** Allows the MPT to navigate the tree **nibble-by-nibble**.
-- **Hex → HP:** Allows the MPT to store the tree **compactly on disk** while maintaining the ability to instantly distinguish between Leaf and Extension nodes upon reading.
+- **Raw → Hex:** Decomposes bytes into nibbles for nibble-by-nibble tree traversal.
+- **Hex → HP:** Packs nibbles back into bytes for disk storage, embedding the node-type flag in the prefix nibble.
 
 ---
 
-## **An Example of MPT Evolution**
+## A Worked Example: MPT Evolution
 
-To see how the MPT evolves, let’s trace the insertion of four account states into a "Simplified World State."
+Let's trace the construction of a small state trie with four accounts. Short hex keys are used for illustration; real keys are 64-nibble keccak256 hashes.
 
-**The Dataset:**
-
-| Key (Hex) | Value (Balance) |
-| --- | --- |
+| Key (hex nibbles) | Account Value |
+|---|---|
 | `a711355` | 45.0 ETH |
 | `a77d337` | 1.00 WEI |
 | `a7f9365` | 1.1 ETH |
 | `a77d397` | 0.12 ETH |
 
-The MPT grows dynamically as keys are added. Instead of a deep, static tree, it optimizes itself through splitting and compression:
+**Step 1 — Insert `a711355`:**
+Only one key exists. No branching is needed. The entire path is stored as a single **Leaf Node**.
 
-1. **First Insertion (`a711355`):** Since there is only one key, the entire path is stored in a single **Leaf Node**.
-    
-    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2011.png)
-    
-2. **Second Insertion (`a77d337`):** This key shares the prefix `a7` with the first. The trie is reorganized: an **Extension Node** is created for `a7`, leading to a **Branch Node**. The remaining paths (`11355` and `7d337`) become two separate Leaf Nodes connected to slots `1` and `7` of that branch.
-    
-    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2012.png)
-    
-3. **Third Insertion (`a7f9365`):** This also shares the `a7` prefix. We simply add a new Leaf Node (`9365`) to slot `f` of the existing Branch Node.
-    
-    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2013.png)
-    
-4. **Fourth Insertion (`a77d397`):** This key shares a longer prefix (`a7` + `7d`) with the second key. This triggers a further split: slot `7` of the first branch now points to a new **Extension Node** (`d3`), which leads to another **Branch Node** to handle the final divergence between the nibbles `3` and `9`.
-    
-    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2014.png)
-    
-5. **Optional:** Things could end here, but the source code implementation of Geth needs to go one level deeper, and only the leaf nodes at the final level contain data.
-    
-    ![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2015.png)
-    
+![Step 1: single Leaf Node for the first key](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2011.png)
 
-Below figure shows The final state of the World State Trie after all the operations:
+**Step 2 — Insert `a77d337`:**
+Both keys share prefix `a7`. The trie restructures: an **Extension Node** captures the shared `a7`, pointing to a new **Branch Node**. From the Branch, nibble `1` leads to a Leaf for suffix `11355` / account_1, and nibble `7` leads to a Leaf for suffix `7d337` / account_2.
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2016.png)
+![Step 2: Extension(a7) → Branch → two Leaf nodes at slots 1 and 7](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2012.png)
+
+**Step 3 — Insert `a7f9365`:**
+Also shares `a7`. We add a Leaf for suffix `f9365` / account_3 at slot `f` of the existing Branch Node.
+
+![Step 3: Branch now has three Leaf nodes at slots 1, 7, f](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2013.png)
+
+**Step 4 — Insert `a77d397`:**
+This key shares `a7` + `7d3` with the key at slot `7`. That Leaf must split: slot `7` of the first Branch now points to a new **Extension Node** for `7d3`, which leads to a second **Branch Node** routing on nibble `3` (→ Leaf `37` / account_2) and nibble `9` (→ Leaf `97` / account_4).
+
+![Step 4: Nested Extension and Branch for keys sharing prefix 7d3](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2014.png)
+
+**Final state:**
+
+![Final MPT after all four insertions](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2016.png)
+
+**How node references propagate integrity:**
+
+Starting from the leaves and working upward, each node is RLP-encoded and either inlined (if < 32 bytes) or stored in LevelDB under its keccak256 hash. Parent nodes store these references in their slots. The root node's reference is the **State Root** — a single 32-byte hash that commits to all four accounts.
+
+Any change to any account value causes a chain reaction: the Leaf changes → its reference changes → the Branch slot changes → the Branch hash changes → the Extension changes → the **State Root** changes. Tamper-evidence propagates to the root automatically.
 
 ---
 
-## Optimization in Geth
+# From Theory to Implementation: Geth Internals
 
-While the Merkle-Patricia Trie is a logical data structure, its real-world performance in clients like Geth depends on how it is cached in memory and persisted on disk.
+The logical Merkle Patricia Trie (MPT) described above is implemented in production clients with additional layers for performance and persistence. This section focuses on Geth’s approach. While our current series centers on EELS rather than Geth, it is still worthwhile to cover it here, as Geth implements the full end-to-end workflow related to the MPT — including storage in LevelDB — which EELS doesn't support for simplicity issue.
 
-### **The Memory Layer: Geth's nodeFlag**
+## In-Memory Representation: nodeFlag and Node Types
 
-In the Geth client, every node currently loaded in memory carries a `nodeFlag` structure. This metadata manages the node's lifecycle and prevents unnecessary computations.
+Geth represents MPT nodes in memory using Go interfaces. There are four concrete types:
 
-```
-// nodeFlag contains caching-related metadata about a node.
+| Geth type | Corresponds to |
+|---|---|
+| `shortNode` | Extension or Leaf node (2-element list) |
+| `fullNode` | Branch node (17-element list) |
+| `valueNode` | The raw data payload stored at a leaf |
+| `hashNode` | A placeholder — a 32-byte hash for a node not yet loaded from disk |
+
+The `hashNode` type is what enables lazy loading: it represents a node the client knows exists by its hash but has not yet fetched from LevelDB.
+
+Every loaded node carries a `nodeFlag`:
+
+```go
 type nodeFlag struct {
-    hash  hashNode // cached hash of the node (may be nil)
-    gen   uint16   // cache generation counter for eviction
-    dirty bool     // whether the node has changes that must be written to disk
+    hash  hashNode  // cached keccak256 hash of this node (nil if dirty)
+    gen   uint16    // cache generation counter for LRU eviction
+    dirty bool      // true if modified and not yet written to disk
 }
 ```
 
-- **Cached Hash:** If a node is "clean" (unmodified), it stores its keccak256 hash here. When calculating the Root Hash of the entire tree, the system simply reads this value instead of re-hashing the entire sub-tree, providing a massive performance boost.
-- **Dirty Flag:** When a node is modified (e.g., an account balance changes), it is marked as dirty. This signals that the node's hash is now invalid and must be recalculated and eventually written to the database.
-- **Cache Generation (gen):** To prevent the state from consuming all available RAM, Geth uses this counter to "evict" old, unmodified nodes from memory, keeping only the most active parts of the state in the cache.
+- **`hash`:** When a node is clean (unmodified since last commit), its keccak256 hash is cached here. Computing the State Root reuses these cached hashes rather than re-encoding and re-hashing the entire sub-tree.
+- **`dirty`:** Set to `true` when a node is modified. Dirty nodes must be re-hashed and written to LevelDB on the next commit.
+- **`gen`:** A generation counter used for LRU-style cache eviction. Old, clean, low-generation nodes can be evicted from memory and reloaded on demand.
 
-### **The Persistence Layer: Content-Addressed Storage**
+---
 
-The MPT exists logically as a tree, but it is stored physically in a flat **Key-Value database (LevelDB)**. The "Merkle" magic happens in how these are mapped:
+## On-Disk Persistence: Content-Addressed Storage
 
-- **Database Key:** The `keccak256` hash of the node's RLP-encoded data.
-- **Database Value:** The actual RLP-encoded data of the node.
+Geth's default (hash-based) storage scheme writes MPT trie nodes to LevelDB as:
 
-This is known as **Content-Addressed Storage**. Because every node is referenced by its hash, the **State Root** (the hash of the root node) serves as a secure entry point.
+```
+LevelDB key:   keccak256(RLP(node))
+LevelDB value: RLP(node)
+```
 
-### Practical Workflow: Lazy Loading
+Because the key is derived from the content itself, looking up a node by its hash is a single O(1) database read. This scheme also makes deduplication natural: if two parts of the trie reference the same child node, they share a single LevelDB entry.
 
-Because nodes reference their children via hashes, the client does not need to load the entire multi-gigabyte state into memory. Instead, it performs **Lazy Loading**—only "unpacking" the nodes along the specific path it needs to access.
+> **Note:** Geth v1.13+ also supports a **path-based storage scheme** where the LevelDB key encodes the trie path rather than the node hash. This alternative enables more efficient state pruning. When reading about Geth's LevelDB layout, always check which scheme is in use.
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2017.png)
+---
 
-As shown in the figure above, if we want to access the data for a key a711355, the process works as follows:
+## Lazy Loading: Traversing Without Full State
 
-1. **Start at the Root:** The client looks up the hash h00 in LevelDB to retrieve the **Extension Node** (a7).
-2. **Follow the Hash:** The Extension Node contains the hash h10. The client queries the database for h10 to retrieve the **Branch Node**.
-3. **Navigate the Branch:** Looking at the Branch Node, the client sees that for nibble 1, the next hash is h20.
-4. **Reach the Leaf:** The client queries h20, which returns the **Leaf Node** containing the remaining path and the final value (45).
-5. **Final Result:** The value 45 itself is often stored as a hash (h30) if it is a large data blob, completing the chain.
+Because nodes reference their children via node references (hashes or inline data), Geth does not need to load the entire state into memory. It uses lazy loading:
 
-This process demonstrates the two desired advantages of MPT:
+![Corrected lazy loading walkthrough — no h30, account struct decoded directly from leaf](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/lazy_loading_corrected.png)
 
-- **Integrity:** Any change to the data 45 would change h30, which changes h20, eventually changing the h00 (Root Hash).
-- **Efficiency:** To verify or read a single account, you only need to perform a few disk lookups (e.g., h00 → h10 → h20 → h30), rather than processing the millions of other accounts in the Ethereum state.
+Let's trace a lookup of key `a711355`:
+
+1. **Root lookup:** The client queries LevelDB with the `stateRoot` hash → receives the Extension Node for `a7`.
+2. **Extension Node:** Nibbles `a`, `7` are consumed. The `nodeReference` field either inlines the Branch Node or provides its hash → LevelDB is queried if needed.
+3. **Branch Node:** Nibble `1` is consumed → slot `1` contains a node reference to the Leaf.
+4. **Leaf Node:** The remaining path `11355` matches. The `value` field is `RLP([nonce, balance, storageRoot, codeHash])`. Decoding this directly yields the balance of 45 ETH.
+
+There is no "hash of the value" step. The account data is stored directly inside the Leaf Node's value field as an RLP-encoded struct. The only hash indirection *within* an account is the `codeHash` field, which points to contract bytecode stored separately — and this applies only to contract accounts, not EOAs.
+
+**Integrity:** If account_1's balance changes from 45 ETH to 46 ETH, the Leaf's RLP encoding changes → its hash changes → the Branch slot changes → the Branch hash changes → the Extension hash changes → a new **State Root** is produced.
+
+**Efficiency:** Reading a single account requires only O(depth) LevelDB lookups — not a full scan of millions of accounts.
+
+---
+
+## What Is Actually Stored in LevelDB?
+
+LevelDB in Geth is a general-purpose key-value store used for many different data types, each with its own key format. Understanding this prevents the misconception that "all LevelDB keys are keccak256 hashes."
+
+| Data Type | LevelDB Key Format | Notes |
+|---|---|---|
+| MPT trie nodes (hash scheme) | `keccak256(RLP(node))` | The case described throughout this article |
+| MPT trie nodes (path scheme) | encoded trie path | Geth v1.13+ opt-in |
+| Block headers | `"h" + blockNum_BE8 + blockHash` | Namespaced by prefix byte |
+| Block bodies | `"b" + blockNum_BE8 + blockHash` | Different prefix |
+| Canonical block hash | `"h" + blockNum_BE8 + "n"` | Single-byte suffix |
+| Contract bytecode | `keccak256(bytecode)` | Stored separately from the trie |
+
+**What leaf values look like in practice:**
+
+- **State trie leaf value:** `RLP([nonce, balance, storageRoot, codeHash])` — all four account fields encoded directly. No further hash indirection for the value itself.
+- **Storage trie leaf value:** `RLP(slot_value)` — the storage slot integer, encoded directly.
+- **`storageRoot`** in an account: the root hash of that contract's own storage trie. It is a hash, but a hash of a *trie root*, not of a value blob.
+- **`codeHash`:** `keccak256(bytecode)`. The bytecode is a separate LevelDB entry looked up on demand. This is the *only* value-level hash indirection in the account model.
 
 ---
 
 # The Four MPTs of Ethereum
 
-To conclude our deep dive into the MPT, we look at how Ethereum applies this structure in practice. Ethereum does not use just one trie; it manages **four distinct MPTs** to track every aspect of the network. These are categorized by their lifespan and scope.
+Ethereum manages **four distinct MPTs**, differentiated by their scope and lifespan.
 
-**A. The State Trie (Global & Persistent)**
+![Block header anchoring four trie roots; Storage Trie nested inside the State Trie](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2018.png)
 
-The State Trie is the most important structure in Ethereum. It acts as a single, global "Golden Record" of every account on the network.
+## A. The State Trie (Global and Persistent)
 
-- **Path (Key):** `keccak256(ethereum_address)`
-- **Value:** An RLP-encoded account structure containing: `[nonce, balance, storageRoot, codeHash]`.
-- **Lifespan:** Persistent. It is updated after every block but carries over from the genesis block to the present.
+The State Trie is a single, continuously evolving record of every account on the network.
 
-**B. The Storage Trie (Per-Contract)**
+- **Key:** `keccak256(account_address)` — the 20-byte address is hashed to produce a 32-byte (64-nibble) trie key.
+- **Value (leaf):** `RLP([nonce, balance, storageRoot, codeHash])`
+- **Lifespan:** Persistent. Each block modifies the trie and produces a new State Root, carrying over from genesis.
 
-Every smart contract has its own independent Storage Trie to hold its internal variables (state variables).
+The **State Root** in a block header commits to the complete account state *after* all transactions in that block are applied.
 
-- **Path (Key):** `keccak256(storage_slot_index)`
-- **Value:** The RLP-encoded data stored at that slot.
-- **Linkage:** The **root hash** of this trie is stored within the corresponding account’s entry in the **State Trie**. Externally Owned Accounts (EOAs) have an empty storage root.
+## B. The Storage Trie (Per-Contract)
 
-**C. The Transaction Trie (Per-Block)**
+Every smart contract account has its own independent Storage Trie.
 
-Every block has its own unique Transaction Trie containing all transactions included in that specific block.
+- **Key:** `keccak256(uint256(slot_index))` — the slot index is zero-padded to 32 bytes (big-endian) before hashing.
+- **Value (leaf):** `RLP(slot_value)` — the 32-byte integer stored at that slot, encoded directly.
+- **Linkage:** The `storageRoot` field in an account's state trie leaf contains the root hash of this contract's storage trie. Externally Owned Accounts (EOAs) have `storageRoot` equal to the hash of the empty trie.
 
-- **Path (Key):** The index of the transaction in the block (e.g., `0`, `1`, `2`).
-- **Lifespan:** Temporary. Once a block is sealed, this trie never changes.
-- **Purpose:** Allows for "Merkle Proofs" to prove a specific transaction was included in a block.
+Verifying a storage slot requires traversing two tries: the state trie (to reach the account and read `storageRoot`) then the storage trie (to reach the slot value).
 
-**D. The Receipt Trie (Per-Block)**
+## C. The Transaction Trie (Per-Block)
 
-Like the Transaction Trie, every block has its own Receipt Trie. It records the *outcome* of the transactions.
+Each block has its own transaction trie, built from the ordered list of transactions included in that block.
 
-- **Path (Key):** The index of the transaction.
-- **Value:** Includes the post-transaction state, gas used, and **Event Logs** (which are critical for dApps to "listen" to contract activity).
+- **Key:** `RLP(transaction_index)` — the integer index (0, 1, 2, …) is RLP-encoded before use as the trie key.
+- **Value:** The RLP encoding of the full transaction.
+- **Lifespan:** Permanent but frozen. Once a block is finalized, its transaction trie never changes.
+- **Purpose:** The `transactionsRoot` enables Merkle proofs proving a specific transaction was included in a specific block.
 
-![image.png](EELS(1)%20What%20is%20Merkle-Patricia%20Trie/image%2018.png)
+## D. The Receipt Trie (Per-Block)
 
-The **Block Header** acts as the cryptographic anchor for the entire network. It contains three specific Merkle roots that allow any node to verify the integrity of the blockchain:
+Mirrors the Transaction Trie in structure, storing the outcome of each transaction.
 
-1. **State Root:** The root of the State Trie after all transactions in the block are applied.
-2. **Transactions Root:** The root of the Transaction Trie for this block.
-3. **Receipts Root:** The root of the Receipt Trie for this block.
+- **Key:** `RLP(transaction_index)` — same index-based keying as the transaction trie.
+- **Value:** The RLP encoding of the transaction receipt: cumulative gas used, bloom filter, and the list of event logs emitted by contracts during execution.
+- **Purpose:** The `receiptsRoot` enables light clients and dApps to verify event logs without downloading the full block body.
 
-Note that the **Storage Trie** is nested inside the **State Trie**. This means to verify a single piece of contract data (e.g., a token balance), you verify the path:
-`Block Header → State Root → Account Leaf → Storage Root → Data Slot`.
+## The Block Header as Cryptographic Anchor
 
-This architecture is what makes **Light Clients** possible. A smartphone does not need to store the hundreds of gigabytes of the "World State." It only needs to download the small **Block Headers**.
+The block header ties together all four tries:
 
-If the smartphone needs to verify your account balance, it asks a full node for a **Merkle Proof**. The full node provides the path of hashes from your account up to the **State Root**. The light client hashes them together; if the result matches the State Root in its trusted Block Header, the balance is mathematically proven to be correct without the client ever seeing the rest of the database.
+```
+BlockHeader {
+    parentHash,
+    stateRoot,         ← root of the State Trie after this block
+    transactionsRoot,  ← root of the Transaction Trie for this block
+    receiptsRoot,      ← root of the Receipt Trie for this block
+    ...
+}
+```
+
+The Storage Trie is **nested inside** the State Trie via the `storageRoot` field. The full verification chain for a storage slot is:
+
+```
+Block Header
+  → stateRoot
+    → State Trie leaf  →  [nonce, balance, storageRoot, codeHash]
+                                                 ↓
+                               Storage Trie leaf  →  slot value
+```
+
+**This is what makes Light Clients practical.** A mobile device needs only block headers (a few hundred bytes each) and can request on-demand Merkle proofs for any account balance, storage slot, transaction, or log. The full node provides the chain of node references; the light client verifies them against its trusted header. No gigabytes of state required.
 
 ---
 
 # Reference
 
-1. [https://en.wikipedia.org/wiki/Merkle_tree](https://en.wikipedia.org/wiki/Merkle_tree)
-2. [https://en.wikipedia.org/wiki/Radix_tree](https://en.wikipedia.org/wiki/Radix_tree)
-3. [https://ethereum.org/developers/docs/data-structures-and-encoding/patricia-merkle-trie](https://ethereum.org/developers/docs/data-structures-and-encoding/patricia-merkle-trie/)
-4. [https://zhuanlan.zhihu.com/p/46702178](https://zhuanlan.zhihu.com/p/46702178)
-5. [https://masteringethereum.xyz/intro.html](https://masteringethereum.xyz/intro.html)
-6. [https://yeasy.gitbook.io/blockchain_guide/05_crypto/merkle_trie](https://yeasy.gitbook.io/blockchain_guide/05_crypto/merkle_trie)
+1. Merkle, R. (1979). *Secrecy, Authentication, and Public Key Systems*. Stanford PhD Dissertation.
+2. Ethereum Yellow Paper — https://ethereum.github.io/yellowpaper/paper.pdf
+3. Ethereum.org — Patricia Merkle Trie — https://ethereum.org/developers/docs/data-structures-and-encoding/patricia-merkle-trie/
+4. go-ethereum (Geth) source — trie package — https://github.com/ethereum/go-ethereum/tree/master/trie
+5. EELS — ethereum/execution-specs — https://github.com/ethereum/execution-specs
+6. Wikipedia — Merkle Tree — https://en.wikipedia.org/wiki/Merkle_tree
+7. Wikipedia — Radix Tree — https://en.wikipedia.org/wiki/Radix_tree
+8. Mastering Ethereum — https://masteringethereum.xyz/intro.html
