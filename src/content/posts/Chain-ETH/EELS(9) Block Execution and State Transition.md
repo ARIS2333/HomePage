@@ -12,13 +12,13 @@ draft: false
 
 - [**Preface**](#preface)
 - [**Introduction**](#introduction)
-- [**1. The BlockChain Object**](#1-the-blockchain-object)
-- [**2. Key Constants**](#2-key-constants-osaka)
-- [**3. State Transition**](#3-state_transition--the-outer-gate)
-- [**4. Header Validation**](#4-header-validation)
-- [**5. Block Execution**](#5-apply_body--block-execution)
-- [**6. How Tries Are Built During Execution**](#6-how-tries-are-built-during-execution)
-- [**7. Output Validation**](#7-output-validation--cryptographic-commitments)
+- [**The BlockChain Object**](#1-the-blockchain-object)
+- [**Key Constants**](#2-key-constants-osaka)
+- [**State Transition**](#3-state_transition--the-outer-gate)
+- [**Header Validation**](#4-header-validation)
+- [**Block Execution**](#5-apply_body--block-execution)
+- [**How Tries Are Built During Execution**](#6-how-tries-are-built-during-execution)
+- [**Output Validation**](#7-output-validation--cryptographic-commitments)
 
 ## Preface
 

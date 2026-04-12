@@ -12,11 +12,11 @@ draft: false
 
 1. [**Preface**](#preface)
 2. [**Introduction**](#introduction)
-3. [**1. Keccak-256 Hashing**](#1-keccak-256-hashing)
-4. [**2. SHA-256 Hashing**](#2-sha-256-hashing)
-5. [**3. ECDSA Signatures**](#3-ecdsa-signatures)
-6. [**4. RLP Encoding**](#4-rlp-encoding)
-7. [**5. Address Derivation**](#5-address-derivation)
+3. [**Keccak-256 Hashing**](#1-keccak-256-hashing)
+4. [**SHA-256 Hashing**](#2-sha-256-hashing)
+5. [**ECDSA Signatures**](#3-ecdsa-signatures)
+6. [**RLP Encoding**](#4-rlp-encoding)
+7. [**Address Derivation**](#5-address-derivation)
   
 
 ## Preface

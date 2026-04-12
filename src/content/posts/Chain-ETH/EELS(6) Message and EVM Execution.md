@@ -12,16 +12,16 @@ draft: false
 
 - [**Preface**](#preface)
 - [**Introduction**](#introduction)
-- [**1. Execution Environments**](#1-execution-environments)
-- [**2. The Message Abstraction**](#2-the-message-abstraction)
-- [**3. The Evm Frame**](#3-the-evm-frame)
-- [**4. MessageCallOutput**](#4-messagecalloutput)
-- [**5. Interpreter Entry Points**](#5-interpreter-entry-points)
-- [**6. The Instruction Dispatch Loop**](#6-the-instruction-dispatch-loop)
-- [**7. Jump Destination Analysis**](#7-jump-destination-analysis)
-- [**8. Precompiled Contracts**](#8-precompiled-contracts)
-- [**9. Call Instruction Semantics**](#9-call-instruction-semantics)
-- [**10. Error Handling**](#10-error-handling)
+- [**Execution Environments**](#1-execution-environments)
+- [**The Message Abstraction**](#2-the-message-abstraction)
+- [**The Evm Frame**](#3-the-evm-frame)
+- [**MessageCallOutput**](#4-messagecalloutput)
+- [**Interpreter Entry Points**](#5-interpreter-entry-points)
+- [**The Instruction Dispatch Loop**](#6-the-instruction-dispatch-loop)
+- [**Jump Destination Analysis**](#7-jump-destination-analysis)
+- [**Precompiled Contracts**](#8-precompiled-contracts)
+- [**Call Instruction Semantics**](#9-call-instruction-semantics)
+- [**Error Handling**](#10-error-handling)
 
 ## Preface
 

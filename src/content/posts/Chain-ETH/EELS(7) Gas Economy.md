@@ -12,15 +12,15 @@ draft: false
 
 - [**Preface**](#preface)
 - [**Introduction**](#introduction)
-- [**1. Gas Constants**](#1-gas-constants)
-- [**2. Gas Accounting**](#2-gas-accounting--charge_gas)
-- [**3. Gas Initialization and Propagation**](#3-gas-initialization-and-propagation)
-- [**4. Memory Expansion Costs**](#4-memory-expansion-costs)
-- [**5. Storage Access Costs**](#5-storage-access-costs--eip-2929)
-- [**6. SSTORE Gas Rules**](#6-sstore-gas-rules--eip-2200--eip-3529)
-- [**7. Transient Storage Gas**](#7-transient-storage-gas--eip-1153)
-- [**8. Sub-call Gas**](#8-sub-call-gas--the-6364-rule)
-- [**9. Gas Refunds**](#9-gas-refunds)
+- [**Gas Constants**](#1-gas-constants)
+- [**Gas Accounting**](#2-gas-accounting--charge_gas)
+- [**Gas Initialization and Propagation**](#3-gas-initialization-and-propagation)
+- [**Memory Expansion Costs**](#4-memory-expansion-costs)
+- [**Storage Access Costs**](#5-storage-access-costs--eip-2929)
+- [**SSTORE Gas Rules**](#6-sstore-gas-rules--eip-2200--eip-3529)
+- [**Transient Storage Gas**](#7-transient-storage-gas--eip-1153)
+- [**Sub-call Gas**](#8-sub-call-gas--the-6364-rule)
+- [**Gas Refunds**](#9-gas-refunds)
 
 
 ## Preface
