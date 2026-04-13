@@ -350,7 +350,7 @@ def validate_transaction(tx: Transaction) -> Tuple[Uint, Uint]:
 This function verifies a transaction by enforcing several critical constraints.
 
 - The gas in a transaction gets used to pay for the intrinsic cost of operations, therefore if there is insufficient gas then it would not be possible to execute a transaction and it will be declared invalid.
-- Additionally, the nonce of a transaction must not equal or exceed the limit defined in EIP-2681. In practice, defining the limit as 2**64-1 has no impact because sending 2**64-1 transactions is improbable.
+- Additionally, the nonce of a transaction must not equal or exceed the limit defined in EIP-2681. In practice, defining the limit as 2^64-1 has no impact because sending 2^64-1 transactions is improbable.
 - Also, the code size of a contract creation transaction must be within limits of the protocol.
 
 This function takes a transaction as a parameter and returns the intrinsic gas cost and the minimum calldata gas cost for the transaction after validation.
